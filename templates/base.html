@@ -183,6 +183,50 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+        
+        /* Enhanced Date Input Styles */
+        .enhanced-date-input {
+            @apply px-4 py-3 text-sm font-semibold text-gray-700 bg-white rounded-xl;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-width: 150px;
+        }
+        
+        .enhanced-date-input:hover {
+            transform: translateY(-1px);
+        }
+        
+        .enhanced-date-input:focus {
+            @apply outline-none;
+            transform: translateY(-1px);
+        }
+        
+        /* Date input placeholder styling */
+        .enhanced-date-input::-webkit-datetime-edit {
+            @apply text-gray-700 font-medium;
+        }
+        
+        .enhanced-date-input::-webkit-calendar-picker-indicator {
+            @apply cursor-pointer hover:scale-110 transition-transform duration-200;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+        
+        /* Date Range Container Enhancement */
+        .date-range-container {
+            @apply bg-white/90 backdrop-blur-md rounded-2xl p-6;
+            box-shadow: 
+                0 20px 25px -5px rgba(0, 0, 0, 0.1), 
+                0 10px 10px -5px rgba(0, 0, 0, 0.04),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .date-range-container:hover {
+            box-shadow: 
+                0 25px 50px -12px rgba(59, 130, 246, 0.25), 
+                0 15px 25px -5px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            transform: translateY(-3px) scale(1.02);
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 text-gray-900 font-inter min-h-screen custom-scrollbar">

@@ -4,6 +4,106 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from datetime import datetime, timedelta
 import random
+import requests
+
+def fetch_blinkr_data(start_date, end_date):
+    """Fetch disbursal data from Blinkr API"""
+    if not start_date or not end_date:
+        print(f"Missing date parameters: start_date={start_date}, end_date={end_date}")
+        return []
+    
+    # Check if start and end dates are the same
+    is_same_date = start_date == end_date
+    print(f"Fetching Blinkr API data for dates: {start_date} to {end_date}")
+    if is_same_date:
+        print(f"⚠️  Same date detected: {start_date} - This should return data for a single day")
+    
+    # For same dates, try multiple approaches:
+    # 1. First try with same start and end date
+    # 2. If that fails, try with end date as next day (some APIs expect this)
+    # 3. Try with start date as previous day (some APIs expect this)
+    api_urls_to_try = []
+    
+    if is_same_date:
+        # Try same date first
+        api_urls_to_try.append(f"https://backend.blinkrloan.com/insights/v1/disbursal2?startDate={start_date}&endDate={end_date}")
+        
+        # Try with end date as next day
+        try:
+            from datetime import datetime, timedelta
+            next_day = (datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
+            api_urls_to_try.append(f"https://backend.blinkrloan.com/insights/v1/disbursal2?startDate={start_date}&endDate={next_day}")
+            print(f"🔄 Will also try alternative URL for same date: startDate={start_date}&endDate={next_day}")
+        except Exception as e:
+            print(f"Could not calculate next day: {e}")
+        
+        # Try with start date as previous day
+        try:
+            from datetime import datetime, timedelta
+            prev_day = (datetime.strptime(start_date, '%Y-%m-%d') - timedelta(days=1)).strftime('%Y-%m-%d')
+            api_urls_to_try.append(f"https://backend.blinkrloan.com/insights/v1/disbursal2?startDate={prev_day}&endDate={end_date}")
+            print(f"🔄 Will also try alternative URL for same date: startDate={prev_day}&endDate={end_date}")
+        except Exception as e:
+            print(f"Could not calculate previous day: {e}")
+    else:
+        # Different dates - ensure inclusive range by extending end date by 1 day
+        # This ensures we get all data from start_date through end_date (inclusive)
+        try:
+            from datetime import datetime, timedelta
+            end_date_inclusive = (datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
+            api_urls_to_try.append(f"https://backend.blinkrloan.com/insights/v1/disbursal2?startDate={start_date}&endDate={end_date_inclusive}")
+            print(f"📅 Inclusive date range: {start_date} to {end_date} (API call: startDate={start_date}&endDate={end_date_inclusive})")
+        except Exception as e:
+            print(f"Could not calculate inclusive end date: {e}")
+            # Fallback to original dates
+            api_urls_to_try.append(f"https://backend.blinkrloan.com/insights/v1/disbursal2?startDate={start_date}&endDate={end_date}")
+    
+    for i, api_url in enumerate(api_urls_to_try):
+        print(f"Trying API URL {i+1}: {api_url}")
+        
+        try:
+            response = requests.get(api_url, timeout=30)
+            print(f"Blinkr API response status: {response.status_code}")
+            response.raise_for_status()
+            data = response.json()
+            print(f"Blinkr API response data type: {type(data)}, length: {len(data) if isinstance(data, dict) else 'N/A'}")
+            
+            # API returns dict with "0","1",.. keys, convert to list
+            result = list(data.values())
+            print(f"Processed {len(result)} applications from Blinkr API")
+            
+            if len(result) > 0:
+                if is_same_date and i == 1:  # Second URL worked (next day)
+                    print(f"✅ Same date data retrieved using alternative URL (next day end date)")
+                elif is_same_date and i == 2:  # Third URL worked (previous day)
+                    print(f"✅ Same date data retrieved using alternative URL (previous day start date)")
+                
+                # Debug: Check the structure of the first few applications
+                print(f"🔍 Debug: Checking data structure of first few applications")
+                for idx, app in enumerate(result[:3]):  # Check first 3 applications
+                    print(f"   App {idx + 1} keys: {list(app.keys()) if isinstance(app, dict) else 'Not a dict'}")
+                    if isinstance(app, dict):
+                        print(f"   App {idx + 1} state: {app.get('state', 'NOT_FOUND')}")
+                        print(f"   App {idx + 1} city: {app.get('city', 'NOT_FOUND')}")
+                        print(f"   App {idx + 1} tenure: {app.get('tenure', 'NOT_FOUND')}")
+                        # Check for alternative field names
+                        print(f"   App {idx + 1} state alternatives: {app.get('State', 'NOT_FOUND')} (State), {app.get('state_name', 'NOT_FOUND')} (state_name)")
+                        print(f"   App {idx + 1} city alternatives: {app.get('City', 'NOT_FOUND')} (City), {app.get('city_name', 'NOT_FOUND')} (city_name)")
+                
+                return result
+            else:
+                print(f"⚠️  URL {i+1} returned 0 results")
+                
+        except requests.exceptions.RequestException as e:
+            print(f"Error with URL {i+1}: {str(e)}")
+            continue
+    
+    if is_same_date:
+        print(f"❌ All attempts failed for same date {start_date}")
+        print(f"   The Blinkr API might not support same start/end dates or there's no data for {start_date}")
+        print(f"   Tried URLs: {api_urls_to_try}")
+    
+    return []
 
 def login_view(request):
     """Login page view"""
@@ -19,7 +119,14 @@ def dashboard_view(request):
     # Simple authentication check (in production, use proper Django auth)
     if request.session.get('authenticated'):
         print("User authenticated, rendering dashboard")  # Debug print
-        return render(request, 'dashboard/dashboard.html')
+        
+        # Create response with cache control headers
+        response = render(request, 'dashboard/dashboard.html')
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        
+        return response
     else:
         print("User not authenticated, redirecting to login")  # Debug print
         return redirect('/login/')
@@ -55,9 +162,23 @@ def authenticate_user(request):
     return redirect('/login/')
 
 def logout_view(request):
-    """Logout view"""
-    request.session.pop('authenticated', None)
-    return redirect('/login/')
+    """Logout view - completely clears session and prevents back button access"""
+    # Clear all session data
+    request.session.flush()
+    
+    # Create response with cache control headers
+    response = redirect('/login/')
+    
+    # Add headers to prevent caching and back button access
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    
+    # Clear any existing cookies
+    response.delete_cookie('sessionid')
+    
+    print("User logged out - session cleared and cache headers set")
+    return response
 
 def test_view(request):
     """Test view to verify routing"""
@@ -72,315 +193,244 @@ def test_view(request):
 @csrf_exempt
 def summary_data(request):
     """API endpoint for summary data with date filtering"""
+    # Check authentication
+    if not request.session.get('authenticated'):
+        return JsonResponse({"error": "Authentication required"}, status=401)
+    
     # Get date parameters
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     
+    # Get filter parameters
+    reloan_filter = request.GET.get('reloan', '')
+    active_filter = request.GET.get('active', '')
+    tenure_filter = request.GET.get('tenure', '')
+    state_filter = request.GET.get('state', '')
+    city_filter = request.GET.get('city', '')
+    
     print(f"Summary data requested - Start: {start_date}, End: {end_date}")
+    print(f"Filters: Reloan={reloan_filter}, Active={active_filter}, Tenure={tenure_filter}, State={state_filter}, City={city_filter}")
     
-    # Mock data with disbursal dates - replace with your actual API call
-    # In production, this would come from your database
-    mock_applications = [
-        {
-            "disbursal_date": "2025-01-15",
-            "sanction_amount": 50000,
-            "disbursed_amount": 45000,
-            "processing_fee": 5000,
-            "interest_amount": 3000,
-            "repayment_amount": 53000
-        },
-        {
-            "disbursal_date": "2025-01-16",
-            "sanction_amount": 75000,
-            "disbursed_amount": 70000,
-            "processing_fee": 7500,
-            "interest_amount": 4500,
-            "repayment_amount": 79000
-        },
-        {
-            "disbursal_date": "2025-01-17",
-            "sanction_amount": 60000,
-            "disbursed_amount": 55000,
-            "processing_fee": 6000,
-            "interest_amount": 3500,
-            "repayment_amount": 64500
-        },
-        {
-            "disbursal_date": "2025-01-18",
-            "sanction_amount": 80000,
-            "disbursed_amount": 75000,
-            "processing_fee": 8000,
-            "interest_amount": 5000,
-            "repayment_amount": 88000
-        },
-        {
-            "disbursal_date": "2025-01-19",
-            "sanction_amount": 45000,
-            "disbursed_amount": 40000,
-            "processing_fee": 4500,
-            "interest_amount": 2500,
-            "repayment_amount": 47000
-        },
-        {
-            "disbursal_date": "2025-07-26",
-            "sanction_amount": 55000,
-            "disbursed_amount": 50000,
-            "processing_fee": 5500,
-            "interest_amount": 3200,
-            "repayment_amount": 58700
-        },
-        {
-            "disbursal_date": "2025-07-27",
-            "sanction_amount": 65000,
-            "disbursed_amount": 60000,
-            "processing_fee": 6500,
-            "interest_amount": 3800,
-            "repayment_amount": 70300
-        },
-        {
-            "disbursal_date": "2025-08-01",
-            "sanction_amount": 70000,
-            "disbursed_amount": 65000,
-            "processing_fee": 7000,
-            "interest_amount": 4200,
-            "repayment_amount": 76200
-        },
-        {
-            "disbursal_date": "2025-08-15",
-            "sanction_amount": 85000,
-            "disbursed_amount": 80000,
-            "processing_fee": 8500,
-            "interest_amount": 5000,
-            "repayment_amount": 93500
-        },
-        {
-            "disbursal_date": "2025-08-20",
-            "sanction_amount": 90000,
-            "disbursed_amount": 85000,
-            "processing_fee": 9000,
-            "interest_amount": 5500,
-            "repayment_amount": 99500
-        }
-    ]
+    # Use Blinkr API data instead of mock data
+    apps = fetch_blinkr_data(start_date, end_date)
     
-    if start_date and end_date:
-        # Filter applications based on disbursal_date range
-        filtered_applications = [
-            app for app in mock_applications 
-            if start_date <= app["disbursal_date"] <= end_date
-        ]
+    if not apps:
+        return JsonResponse({
+            "total_applications": 0,
+            "total_sanction_amount": 0,
+            "total_disbursed_amount": 0,
+            "total_pf_amount": 0,
+            "total_interest_amount": 0,
+            "total_repayment_amount": 0,
+            "avg_disbursal": 0
+        })
+    
+    print(f"Processing {len(apps)} applications from Blinkr API")
+    
+    # Calculate totals from Blinkr API data
+    total_sanction_amount = 0
+    total_disbursed_amount = 0
+    total_pf_amount = 0
+    total_interest_amount = 0
+    total_repayment_amount = 0
+    filtered_applications = 0  # Counter for filtered applications
+    
+    for app in apps:
+        # Apply filters if specified
+        if reloan_filter:
+            is_reloan_case = app.get('is_reloan_case', False)
+            if reloan_filter == 'reloan' and not is_reloan_case:
+                continue
+            elif reloan_filter == 'new' and is_reloan_case:
+                continue
         
-        print(f"Filtered applications count: {len(filtered_applications)}")
+        # Apply active filter using is_lead_closed field from API
+        if active_filter:
+            is_lead_closed = app.get('is_lead_closed', False)
+            if active_filter == 'active' and is_lead_closed:
+                continue  # Skip closed leads when filtering for active cases
+            elif active_filter == 'inactive' and not is_lead_closed:
+                continue  # Skip open leads when filtering for inactive cases
         
-        if filtered_applications:
-            # Calculate summary from filtered data
-            total_applications = len(filtered_applications)
-            total_sanction_amount = sum(app["sanction_amount"] for app in filtered_applications)
-            total_disbursed_amount = sum(app["disbursed_amount"] for app in filtered_applications)
-            total_pf_amount = sum(app["processing_fee"] for app in filtered_applications)
-            total_interest_amount = sum(app["interest_amount"] for app in filtered_applications)
-            total_repayment_amount = sum(app["repayment_amount"] for app in filtered_applications)
-            avg_disbursal = total_disbursed_amount / total_applications if total_applications > 0 else 0
-            
-            base_data = {
-                "total_applications": total_applications,
-                "total_sanction_amount": total_sanction_amount,
-                "total_disbursed_amount": total_disbursed_amount,
-                "total_pf_amount": total_pf_amount,
-                "total_interest_amount": total_interest_amount,
-                "total_repayment_amount": total_repayment_amount,
-                "avg_disbursal": round(avg_disbursal, 2)
-            }
-            
-            print(f"Calculated repayment amount for date range: ₹{total_repayment_amount:,}")
-            print(f"Breakdown: {len(filtered_applications)} applications with repayment amounts:")
-            for app in filtered_applications:
-                print(f"  - {app['disbursal_date']}: ₹{app['repayment_amount']:,} ({app['full_name']})")
-        else:
-            # No data for selected date range
-            base_data = {
-                "total_applications": 0,
-                "total_sanction_amount": 0,
-                "total_disbursed_amount": 0,
-                "total_pf_amount": 0,
-                "total_interest_amount": 0,
-                "total_repayment_amount": 0,
-                "avg_disbursal": 0
-            }
-            print("No data found for selected date range")
-    else:
-        # No date range provided, return all data
-        total_applications = len(mock_applications)
-        total_sanction_amount = sum(app["sanction_amount"] for app in mock_applications)
-        total_disbursed_amount = sum(app["disbursed_amount"] for app in mock_applications)
-        total_pf_amount = sum(app["processing_fee"] for app in mock_applications)
-        total_interest_amount = sum(app["interest_amount"] for app in mock_applications)
-        total_repayment_amount = sum(app["repayment_amount"] for app in mock_applications)
-        avg_disbursal = total_disbursed_amount / total_applications if total_applications > 0 else 0
+        # Apply tenure filter using tenure field from API
+        if tenure_filter:
+            app_tenure = app.get('tenure', 0)
+            try:
+                # Convert tenure_filter to integer for comparison
+                filter_tenure = int(tenure_filter)
+                if app_tenure != filter_tenure:
+                    continue
+            except (ValueError, TypeError):
+                # If tenure_filter is not a valid integer, skip this filter
+                print(f"⚠️  Invalid tenure filter value: {tenure_filter}")
+                continue
         
-        base_data = {
-            "total_applications": total_applications,
-            "total_sanction_amount": total_sanction_amount,
-            "total_disbursed_amount": total_disbursed_amount,
-            "total_pf_amount": total_pf_amount,
-            "total_interest_amount": total_interest_amount,
-            "total_repayment_amount": total_repayment_amount,
-            "avg_disbursal": round(avg_disbursal, 2)
-        }
+        if state_filter:
+            app_state = app.get('state', '')
+            if app_state != state_filter:
+                continue
+        
+        if city_filter:
+            app_city = app.get('city', '')
+            if app_city != city_filter:
+                continue
+        
+        # Count this as a filtered application
+        filtered_applications += 1
+        
+        # Handle different field names from Blinkr API
+        sanction_amount = float(app.get('sanction_amount', app.get('sanctionAmount', app.get('loan_amount', 0))) or 0)
+        disbursed_amount = float(app.get('disbursed_amount', app.get('disbursal_amt', app.get('disbursalAmount', 0))) or 0)
+        processing_fee = float(app.get('processing_fee', app.get('processingFee', app.get('pf_amount', 0))) or 0)
+        interest_amount = float(app.get('interest_amount', app.get('interestAmount', 0)) or 0)
+        repayment_amount = float(app.get('repayment_amount', app.get('repaymentAmount', 0)) or 0)
+        
+        total_sanction_amount += sanction_amount
+        total_disbursed_amount += disbursed_amount
+        total_pf_amount += processing_fee
+        total_interest_amount += interest_amount
+        total_repayment_amount += repayment_amount
+    
+    # Use filtered count for total applications
+    total_applications = filtered_applications
+    avg_disbursal = total_disbursed_amount / total_applications if total_applications > 0 else 0
+    
+    base_data = {
+        "total_applications": total_applications,
+        "total_sanction_amount": round(total_sanction_amount, 2),
+        "total_disbursed_amount": round(total_disbursed_amount, 2),
+        "total_pf_amount": round(total_pf_amount, 2),
+        "total_interest_amount": round(total_interest_amount, 2),
+        "total_repayment_amount": round(total_repayment_amount, 2),
+        "avg_disbursal": round(avg_disbursal, 2)
+    }
+    
+    print(f"Calculated summary from Blinkr API: {total_applications} applications")
+    print(f"Total disbursed amount: ₹{total_disbursed_amount:,}")
     
     return JsonResponse(base_data)
 
 @csrf_exempt
 def charts_data(request):
-    """API endpoint for charts data with date filtering"""
+    """API endpoint for charts data with date filtering (using Blinkr API)"""
+    # Check authentication
+    if not request.session.get('authenticated'):
+        return JsonResponse({"error": "Authentication required"}, status=401)
+    
     # Get date parameters
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     
-    print(f"Charts data requested - Start: {start_date}, End: {end_date}")
+    # Get filter parameters
+    reloan_filter = request.GET.get('reloan', '')
+    active_filter = request.GET.get('active', '')
+    tenure_filter = request.GET.get('tenure', '')
+    state_filter = request.GET.get('state', '')
+    city_filter = request.GET.get('city', '')
     
-    # Mock data with disbursal dates - replace with your actual API call
-    # In production, this would come from your database
-    mock_applications = [
+    if not start_date or not end_date:
+        return JsonResponse({"error": "start_date and end_date required"}, status=400)
+    
+    print(f"Charts data requested - Start: {start_date}, End: {end_date}")
+    print(f"Filters: Reloan={reloan_filter}, Active={active_filter}, Tenure={tenure_filter}, State={state_filter}, City={city_filter}")
+    
+    # Use Blinkr API data instead of mock data
+    apps = fetch_blinkr_data(start_date, end_date)
+    
+    if not apps:
+        return JsonResponse({
+            "state_data": [{"state": "No Data", "value": 0, "percentage": 0}],
+            "city_data": [{"city": "No Data", "value": 0, "percentage": 0}]
+        })
+    
+    print(f"Charts: Processing {len(apps)} applications from Blinkr API")
+    
+    # Calculate state and city data from Blinkr API data
+    state_map = {}
+    city_map = {}
+    
+    for app in apps:
+        # Apply filters if specified
+        if reloan_filter:
+            is_reloan_case = app.get('is_reloan_case', False)
+            if reloan_filter == 'reloan' and not is_reloan_case:
+                continue
+            elif reloan_filter == 'new' and is_reloan_case:
+                continue
+        
+        # Apply active filter using is_lead_closed field from API
+        if active_filter:
+            is_lead_closed = app.get('is_lead_closed', False)
+            if active_filter == 'active' and is_lead_closed:
+                continue  # Skip closed leads when filtering for active cases
+            elif active_filter == 'inactive' and not is_lead_closed:
+                continue  # Skip open leads when filtering for inactive cases
+        
+        # Apply tenure filter using tenure field from API
+        if tenure_filter:
+            app_tenure = app.get('tenure', 0)
+            try:
+                # Convert tenure_filter to integer for comparison
+                filter_tenure = int(tenure_filter)
+                if app_tenure != filter_tenure:
+                    continue
+            except (ValueError, TypeError):
+                # If tenure_filter is not a valid integer, skip this filter
+                print(f"⚠️  Invalid tenure filter value: {tenure_filter}")
+                continue
+        
+        if state_filter:
+            app_state = app.get('state', '')
+            if app_state != state_filter:
+                continue
+        
+        if city_filter:
+            app_city = app.get('city', '')
+            if app_city != city_filter:
+                continue
+        
+        # Handle different field names from Blinkr API
+        state = app.get('state', 'Unknown')
+        city = app.get('city', 'Unknown')
+        disbursed_amount = float(app.get('disbursed_amount', app.get('disbursal_amt', app.get('disbursalAmount', 0))) or 0)
+        
+        # Aggregate state data
+        if state in state_map:
+            state_map[state] += disbursed_amount
+        else:
+            state_map[state] = disbursed_amount
+        
+        # Aggregate city data
+        if city in city_map:
+            city_map[city] += disbursed_amount
+        else:
+            city_map[city] = disbursed_amount
+    
+    # Convert to chart format
+    total_state_amount = sum(state_map.values())
+    state_data = [
         {
-            "disbursal_date": "2025-01-15",
-            "state": "Delhi",
-            "city": "Delhi",
-            "disbursed_amount": 45000
-        },
-        {
-            "disbursal_date": "2025-01-16",
-            "state": "Haryana",
-            "city": "Gurugram",
-            "disbursed_amount": 70000
-        },
-        {
-            "disbursal_date": "2025-01-17",
-            "state": "Uttar Pradesh",
-            "city": "Noida",
-            "disbursed_amount": 55000
-        },
-        {
-            "disbursal_date": "2025-01-18",
-            "state": "Delhi",
-            "city": "Central Delhi",
-            "disbursed_amount": 75000
-        },
-        {
-            "disbursal_date": "2025-01-19",
-            "state": "Haryana",
-            "city": "Faridabad",
-            "disbursed_amount": 40000
-        },
-        {
-            "disbursal_date": "2025-07-26",
-            "state": "Maharashtra",
-            "city": "Mumbai Suburban",
-            "disbursed_amount": 50000
-        },
-        {
-            "disbursal_date": "2025-07-27",
-            "state": "Telangana",
-            "city": "Hyderabad",
-            "disbursed_amount": 60000
-        },
-        {
-            "disbursal_date": "2025-08-01",
-            "state": "Delhi",
-            "city": "West Delhi",
-            "disbursed_amount": 65000
-        },
-        {
-            "disbursal_date": "2025-08-15",
-            "state": "Uttar Pradesh",
-            "city": "Lucknow",
-            "disbursed_amount": 80000
-        },
-        {
-            "disbursal_date": "2025-08-20",
-            "state": "Haryana",
-            "city": "Ghaziabad",
-            "disbursed_amount": 85000
+            "state": state,
+            "value": amount,
+            "percentage": round((amount / total_state_amount) * 100, 1) if total_state_amount > 0 else 0
         }
+        for state, amount in state_map.items()
     ]
     
-    if start_date and end_date:
-        # Filter applications based on disbursal_date range
-        filtered_applications = [
-            app for app in mock_applications 
-            if start_date <= app["disbursal_date"] <= end_date
-        ]
-        
-        print(f"Charts: Filtered applications count: {len(filtered_applications)}")
-        
-        if filtered_applications:
-            # Calculate state and city data from filtered applications
-            state_map = {}
-            city_map = {}
-            
-            for app in filtered_applications:
-                # Aggregate state data
-                state = app["state"]
-                if state in state_map:
-                    state_map[state] += app["disbursed_amount"]
-                else:
-                    state_map[state] = app["disbursed_amount"]
-                
-                # Aggregate city data
-                city = app["city"]
-                if city in city_map:
-                    city_map[city] += app["disbursed_amount"]
-                else:
-                    city_map[city] = app["disbursed_amount"]
-            
-            # Convert to chart format
-            total_state_amount = sum(state_map.values())
-            state_data = [
-                {
-                    "state": state,
-                    "value": amount,
-                    "percentage": round((amount / total_state_amount) * 100, 1) if total_state_amount > 0 else 0
-                }
-                for state, amount in state_map.items()
-            ]
-            
-            total_city_amount = sum(city_map.values())
-            city_data = [
-                {
-                    "city": city,
-                    "value": amount,
-                    "percentage": round((amount / total_city_amount) * 100, 1) if total_city_amount > 0 else 0
-                }
-                for city, amount in city_map.items()
-            ]
-            
-            base_data = {
-                "state_data": state_data,
-                "city_data": city_data
-            }
-        else:
-            # No data for selected date range
-            base_data = {
-                "state_data": [{"state": "No Data", "value": 0, "percentage": 0}],
-                "city_data": [{"city": "No Data", "value": 0, "percentage": 0}]
-            }
-    else:
-        # No date range provided, return default data
-        base_data = {
-            "state_data": [
-                {"state": "Delhi", "value": 150000, "percentage": 45.2},
-                {"state": "Haryana", "value": 120000, "percentage": 36.1},
-                {"state": "Uttar Pradesh", "value": 62000, "percentage": 18.7}
-            ],
-            "city_data": [
-                {"city": "Gurugram", "value": 80000, "percentage": 24.1},
-                {"city": "Delhi", "value": 75000, "percentage": 22.6},
-                {"city": "Noida", "value": 65000, "percentage": 19.6},
-                {"city": "Faridabad", "value": 45000, "percentage": 13.6},
-                {"city": "Ghaziabad", "value": 35000, "percentage": 10.5},
-                {"city": "Others", "value": 32000, "percentage": 9.6}
-            ]
+    total_city_amount = sum(city_map.values())
+    city_data = [
+        {
+            "city": city,
+            "value": amount,
+            "percentage": round((amount / total_city_amount) * 100, 1) if total_city_amount > 0 else 0
         }
+        for city, amount in city_map.items()
+    ]
+    
+    base_data = {
+        "state_data": state_data,
+        "city_data": city_data
+    }
     
     return JsonResponse(base_data)
 
@@ -394,143 +444,90 @@ def filtered_charts_data(request):
     active_filter = request.GET.get('active', '')
     tenure_filter = request.GET.get('tenure', '')
     
-    # Base data - in a real application, this would come from database queries
-    all_state_data = {
-        'Maharashtra': [
-            {'state': 'Maharashtra', 'value': 137000, 'percentage': 29.15},
-            {'state': 'Maharashtra (New)', 'value': 89000, 'percentage': 19.0},
-            {'state': 'Maharashtra (Reloan)', 'value': 48000, 'percentage': 10.15}
-        ],
-        'Haryana': [
-            {'state': 'Haryana', 'value': 120000, 'percentage': 25.57},
-            {'state': 'Haryana (New)', 'value': 75000, 'percentage': 16.0},
-            {'state': 'Haryana (Reloan)', 'value': 45000, 'percentage': 9.57}
-        ],
-        'Telangana': [
-            {'state': 'Telangana', 'value': 93000, 'percentage': 19.8},
-            {'state': 'Telangana (New)', 'value': 62000, 'percentage': 13.2},
-            {'state': 'Telangana (Reloan)', 'value': 31000, 'percentage': 6.6}
-        ],
-        'Uttar Pradesh': [
-            {'state': 'Uttar Pradesh', 'value': 67000, 'percentage': 14.29},
-            {'state': 'Uttar Pradesh (New)', 'value': 42000, 'percentage': 8.9},
-            {'state': 'Uttar Pradesh (Reloan)', 'value': 25000, 'percentage': 5.39}
-        ],
-        'Delhi': [
-            {'state': 'Delhi', 'value': 53000, 'percentage': 11.2},
-            {'state': 'Delhi (New)', 'value': 35000, 'percentage': 7.4},
-            {'state': 'Delhi (Reloan)', 'value': 18000, 'percentage': 3.8}
-        ]
-    }
+    # Get date parameters for API call
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
     
-    all_city_data = {
-        'Gurugram': [
-            {'city': 'Gurugram', 'value': 120000, 'percentage': 25.57},
-            {'city': 'Gurugram (New)', 'value': 75000, 'percentage': 16.0},
-            {'city': 'Gurugram (Reloan)', 'value': 45000, 'percentage': 9.57}
-        ],
-        'Hyderabad': [
-            {'city': 'Hyderabad', 'value': 80000, 'percentage': 17.07},
-            {'city': 'Hyderabad (New)', 'value': 52000, 'percentage': 11.1},
-            {'city': 'Hyderabad (Reloan)', 'value': 28000, 'percentage': 6.0}
-        ],
-        'Mumbai Suburban': [
-            {'city': 'Mumbai Suburban', 'value': 71000, 'percentage': 15.22},
-            {'city': 'Mumbai Suburban (New)', 'value': 48000, 'percentage': 10.2},
-            {'city': 'Mumbai Suburban (Reloan)', 'value': 23000, 'percentage': 5.0}
-        ],
-        'Pune': [
-            {'city': 'Pune', 'value': 65000, 'percentage': 13.9},
-            {'city': 'Pune (New)', 'value': 42000, 'percentage': 9.0},
-            {'city': 'Pune (Reloan)', 'value': 23000, 'percentage': 4.9}
-        ],
-        'Lucknow': [
-            {'city': 'Lucknow', 'value': 35000, 'percentage': 7.47},
-            {'city': 'Lucknow (New)', 'value': 22000, 'percentage': 4.7},
-            {'city': 'Lucknow (Reloan)', 'value': 13000, 'percentage': 2.77}
-        ],
-        'Central Delhi': [
-            {'city': 'Central Delhi', 'value': 32000, 'percentage': 6.83},
-            {'city': 'Central Delhi (New)', 'value': 20000, 'percentage': 4.3},
-            {'city': 'Central Delhi (Reloan)', 'value': 12000, 'percentage': 2.53}
-        ],
-        'West Delhi': [
-            {'city': 'West Delhi', 'value': 19000, 'percentage': 4.05},
-            {'city': 'West Delhi (New)', 'value': 12000, 'percentage': 2.6},
-            {'city': 'West Delhi (Reloan)', 'value': 7000, 'percentage': 1.45}
-        ],
-        'Ghaziabad': [
-            {'city': 'Ghaziabad', 'value': 13000, 'percentage': 2.73},
-            {'city': 'Ghaziabad (New)', 'value': 8000, 'percentage': 1.7},
-            {'city': 'Ghaziabad (Reloan)', 'value': 5000, 'percentage': 1.03}
-        ]
-    }
+    if not start_date or not end_date:
+        return JsonResponse({"error": "start_date and end_date required"}, status=400)
     
-    # Apply filters and generate filtered data
-    if state_filter:
-        # Filter by specific state
-        state_data = all_state_data.get(state_filter, [])
-        if city_filter and city_filter in all_city_data:
-            # Further filter by city
-            city_data = all_city_data[city_filter]
-        else:
-            # Show cities within the selected state
-            city_data = []
-            for city, city_info in all_city_data.items():
-                if any(city in state_filter for state in ['Delhi', 'Haryana', 'Uttar Pradesh'] if city in ['Gurugram', 'Central Delhi', 'West Delhi', 'Ghaziabad']):
-                    city_data.extend(city_info)
-                elif state_filter == 'Maharashtra' and city in ['Mumbai Suburban', 'Pune']:
-                    city_data.extend(city_info)
-                elif state_filter == 'Telangana' and city == 'Hyderabad':
-                    city_data.extend(city_info)
-                elif state_filter == 'Uttar Pradesh' and city == 'Lucknow':
-                    city_data.extend(city_info)
-    elif city_filter:
-        # Filter by specific city only
-        city_data = all_city_data.get(city_filter, [])
-        # Determine state from city
-        state_mapping = {
-            'Gurugram': 'Haryana',
-            'Hyderabad': 'Telangana',
-            'Mumbai Suburban': 'Maharashtra',
-            'Pune': 'Maharashtra',
-            'Lucknow': 'Uttar Pradesh',
-            'Central Delhi': 'Delhi',
-            'West Delhi': 'Delhi',
-            'Ghaziabad': 'Uttar Pradesh'
-        }
-        state_data = all_state_data.get(state_mapping.get(city_filter, ''), [])
-    else:
-        # No filters applied, return default data
-        state_data = [
-            {'state': 'Maharashtra', 'value': 137000, 'percentage': 29.15},
-            {'state': 'Haryana', 'value': 120000, 'percentage': 25.57},
-            {'state': 'Telangana', 'value': 93000, 'percentage': 19.8},
-            {'state': 'Uttar Pradesh', 'value': 67000, 'percentage': 14.29},
-            {'state': 'Delhi', 'value': 53000, 'percentage': 11.2}
-        ]
+    print(f"Filtered charts data requested - Start: {start_date}, End: {end_date}")
+    print(f"Filters: State={state_filter}, City={city_filter}, Reloan={reloan_filter}")
+    
+    # Use Blinkr API data instead of mock data
+    apps = fetch_blinkr_data(start_date, end_date)
+    
+    if not apps:
+        return JsonResponse({
+            "state_data": [{"state": "No Data", "value": 0, "percentage": 0}],
+            "city_data": [{"city": "No Data", "value": 0, "percentage": 0}],
+            "filters_applied": {
+                'state': state_filter,
+                'city': city_filter,
+                'reloan': reloan_filter,
+                'active': active_filter,
+                'tenure': tenure_filter
+            }
+        })
+    
+    print(f"Filtered charts: Processing {len(apps)} applications from Blinkr API")
+    
+    # Calculate state and city data from Blinkr API data
+    state_map = {}
+    city_map = {}
+    
+    for app in apps:
+        # Handle different field names from Blinkr API
+        state = app.get('state', 'Unknown')
+        city = app.get('city', 'Unknown')
+        disbursed_amount = float(app.get('disbursed_amount', app.get('disbursal_amt', app.get('disbursalAmount', 0))) or 0)
         
-        city_data = [
-            {'city': 'Gurugram', 'value': 120000, 'percentage': 25.57},
-            {'city': 'Hyderabad', 'value': 80000, 'percentage': 17.07},
-            {'city': 'Mumbai Suburban', 'value': 71000, 'percentage': 15.22},
-            {'city': 'Pune', 'value': 65000, 'percentage': 13.9},
-            {'city': 'Lucknow', 'value': 35000, 'percentage': 7.47},
-            {'city': 'Central Delhi', 'value': 32000, 'percentage': 6.83},
-            {'city': 'West Delhi', 'value': 19000, 'percentage': 4.05},
-            {'city': 'Ghaziabad', 'value': 13000, 'percentage': 2.73}
-        ]
+        # Apply filters if specified
+        if state_filter and state != state_filter:
+            continue
+        if city_filter and city != city_filter:
+            continue
+        
+        # Apply reloan filter using is_reloan_case field from API
+        if reloan_filter:
+            is_reloan_case = app.get('is_reloan_case', False)
+            if reloan_filter == 'reloan' and not is_reloan_case:
+                continue
+            elif reloan_filter == 'new' and is_reloan_case:
+                continue
+        
+        # Aggregate state data
+        if state in state_map:
+            state_map[state] += disbursed_amount
+        else:
+            state_map[state] = disbursed_amount
+        
+        # Aggregate city data
+        if city in city_map:
+            city_map[city] += disbursed_amount
+        else:
+            city_map[city] = disbursed_amount
     
-    # Apply additional filters (reloan, active, tenure) if needed
-    # In a real application, these would filter the actual data
-    if reloan_filter:
-        # Filter by reloan case
-        if reloan_filter == 'new':
-            state_data = [item for item in state_data if 'New' in item['state'] or 'New' not in item['state'] and 'Reloan' not in item['state']]
-            city_data = [item for item in city_data if 'New' in item['city'] or 'New' not in item['city'] and 'Reloan' not in item['city']]
-        elif reloan_filter == 'reloan':
-            state_data = [item for item in state_data if 'Reloan' in item['state']]
-            city_data = [item for item in city_data if 'Reloan' in item['city']]
+    # Convert to chart format
+    total_state_amount = sum(state_map.values())
+    state_data = [
+        {
+            "state": state,
+            "value": amount,
+            "percentage": round((amount / total_state_amount) * 100, 1) if total_state_amount > 0 else 0
+        }
+        for state, amount in state_map.items()
+    ]
+    
+    total_city_amount = sum(city_map.values())
+    city_data = [
+        {
+            "city": city,
+            "value": amount,
+            "percentage": round((amount / total_city_amount) * 100, 1) if total_city_amount > 0 else 0
+        }
+        for city, amount in city_map.items()
+    ]
     
     # Ensure we have data to return
     if not state_data:
@@ -552,211 +549,301 @@ def filtered_charts_data(request):
 
 @csrf_exempt
 def table_data(request):
-    """API endpoint for table data with date filtering"""
+    """API endpoint for table data with date filtering (using Blinkr API)"""
+    # Check authentication
+    if not request.session.get('authenticated'):
+        return JsonResponse({"error": "Authentication required"}, status=401)
+    
     # Get date parameters
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     
-    print(f"Table data requested - Start: {start_date}, End: {end_date}")
+    # Get pagination parameters
+    page = int(request.GET.get('page', 1))
+    per_page = int(request.GET.get('per_page', 10))
     
-    # Mock data - replace with your actual API call
-    # In production, filter this data based on start_date and end_date
+    # Get search parameter
+    search_term = request.GET.get('search', '').strip()
+    
+    # Get filter parameters
+    reloan_filter = request.GET.get('reloan', '')
+    active_filter = request.GET.get('active', '')
+    tenure_filter = request.GET.get('tenure', '')
+    state_filter = request.GET.get('state', '')
+    city_filter = request.GET.get('city', '')
+    
+    if not start_date or not end_date:
+        return JsonResponse({"error": "start_date and end_date required"}, status=400)
+    
+    print(f"Table data requested - Start: {start_date}, End: {end_date}, Page: {page}, Per Page: {per_page}, Search: '{search_term}'")
+    print(f"Filters: Reloan={reloan_filter}, Active={active_filter}, Tenure={tenure_filter}, State={state_filter}, City={city_filter}")
+    
+    # Use Blinkr API data instead of mock data
+    apps = fetch_blinkr_data(start_date, end_date)
+    
+    if not apps:
+        return JsonResponse({
+            "applications": [],
+            "total_pages": 0,
+            "current_page": 1,
+            "total_items": 0,
+            "per_page": per_page
+        })
+    
+    print(f"Table: Processing {len(apps)} applications from Blinkr API")
+    
+    # Process applications for table display
+    table_applications = []
+    for i, app in enumerate(apps):
+        # Debug: Print the first few applications to see field names
+        if i < 3:
+            print(f"🔍 Sample app {i}: {app}")
+        
+        # Handle different field names from Blinkr API
+        disbursal_date = app.get('disbursal_date', app.get('disbursalDate', app.get('date', 'N/A')))
+        full_name = app.get('full_name', app.get('fullName', app.get('name', app.get('customer_name', app.get('applicant_name', 'N/A')))))
+        sanction_amount = float(app.get('sanction_amount', app.get('sanctionAmount', app.get('loan_amount', 0))) or 0)
+        disbursed_amount = float(app.get('disbursed_amount', app.get('disbursal_amt', app.get('disbursalAmount', 0))) or 0)
+        processing_fee = float(app.get('processing_fee', app.get('processingFee', app.get('pf_amount', 0))) or 0)
+        interest_amount = float(app.get('interest_amount', app.get('interestAmount', 0)) or 0)
+        repayment_amount = float(app.get('repayment_amount', app.get('repaymentAmount', 0)) or 0)
+        
+        # Apply search filter if search term exists
+        if search_term:
+            # Search in full name (case-insensitive)
+            if search_term.lower() not in full_name.lower():
+                continue  # Skip this application if it doesn't match search
+        
+        # Apply reloan filter using is_reloan_case field from API
+        if reloan_filter:
+            is_reloan_case = app.get('is_reloan_case', False)
+            if reloan_filter == 'reloan' and not is_reloan_case:
+                continue
+            elif reloan_filter == 'new' and is_reloan_case:
+                continue
+        
+        # Apply active filter using is_lead_closed field from API
+        if active_filter:
+            is_lead_closed = app.get('is_lead_closed', False)
+            if active_filter == 'active' and is_lead_closed:
+                continue  # Skip closed leads when filtering for active cases
+            elif active_filter == 'inactive' and not is_lead_closed:
+                continue  # Skip open leads when filtering for inactive cases
+        
+        # Apply tenure filter using tenure field from API
+        if tenure_filter:
+            app_tenure = app.get('tenure', 0)
+            try:
+                # Convert tenure_filter to integer for comparison
+                filter_tenure = int(tenure_filter)
+                if app_tenure != filter_tenure:
+                    continue
+            except (ValueError, TypeError):
+                # If tenure_filter is not a valid integer, skip this filter
+                print(f"⚠️  Invalid tenure filter value: {tenure_filter}")
+                continue
+        
+        # Apply state filter
+        if state_filter:
+            app_state = app.get('state', '')
+            if app_state != state_filter:
+                continue
+        
+        # Apply city filter
+        if city_filter:
+            app_city = app.get('city', '')
+            if app_city != city_filter:
+                continue
+        
+        table_applications.append({
+            "id": i + 1,
+            "disbursal_date": disbursal_date,
+            "full_name": full_name,
+            "sanction_amount": sanction_amount,
+            "disbursed_amount": disbursed_amount,
+            "processing_fee": processing_fee,
+            "interest_amount": interest_amount,
+            "repayment_amount": repayment_amount
+        })
+    
+    print(f"🔍 After search filtering: {len(table_applications)} applications match search term '{search_term}'")
+    
+    # Calculate pagination
+    total_items = len(table_applications)
+    total_pages = (total_items + per_page - 1) // per_page  # Ceiling division
+    
+    # Ensure page is within valid range
+    if page < 1:
+        page = 1
+    elif page > total_pages:
+        page = total_pages
+    
+    # Get the slice of data for the current page
+    start_index = (page - 1) * per_page
+    end_index = start_index + per_page
+    page_data = table_applications[start_index:end_index]
+    
     base_data = {
-        "applications": [
-            {
-                "id": 1,
-                "disbursal_date": "2025-01-15",
-                "full_name": "John Doe",
-                "sanction_amount": 50000,
-                "disbursed_amount": 45000,
-                "processing_fee": 5000,
-                "interest_amount": 3000,
-                "repayment_amount": 53000
-            },
-            {
-                "id": 2,
-                "disbursal_date": "2025-01-16",
-                "full_name": "Jane Smith",
-                "sanction_amount": 75000,
-                "disbursed_amount": 70000,
-                "processing_fee": 7500,
-                "interest_amount": 4500,
-                "repayment_amount": 79000
-            }
-        ],
-        "total_pages": 1,
-        "current_page": 1,
-        "total_items": 2
+        "applications": page_data,
+        "total_pages": total_pages,
+        "current_page": page,
+        "total_items": total_items,
+        "per_page": per_page,
+        "start_index": start_index + 1,
+        "end_index": min(end_index, total_items)
     }
     
-    # Mock data with disbursal dates - replace with your actual API call
-    # In production, this would come from your database
-    mock_applications = [
-        {
-            "id": 1,
-            "disbursal_date": "2025-01-15",
-            "full_name": "John Doe",
-            "sanction_amount": 50000,
-            "disbursed_amount": 45000,
-            "processing_fee": 5000,
-            "interest_amount": 3000,
-            "repayment_amount": 53000
-        },
-        {
-            "id": 2,
-            "disbursal_date": "2025-01-16",
-            "full_name": "Jane Smith",
-            "sanction_amount": 75000,
-            "disbursed_amount": 70000,
-            "processing_fee": 7500,
-            "interest_amount": 4500,
-            "repayment_amount": 79000
-        },
-        {
-            "id": 3,
-            "disbursal_date": "2025-01-17",
-            "full_name": "Mike Johnson",
-            "sanction_amount": 60000,
-            "disbursed_amount": 55000,
-            "processing_fee": 6000,
-            "interest_amount": 3500,
-            "repayment_amount": 64500
-        },
-        {
-            "id": 4,
-            "disbursal_date": "2025-01-18",
-            "full_name": "Sarah Wilson",
-            "sanction_amount": 80000,
-            "disbursed_amount": 75000,
-            "processing_fee": 8000,
-            "interest_amount": 5000,
-            "repayment_amount": 88000
-        },
-        {
-            "id": 5,
-            "disbursal_date": "2025-01-19",
-            "full_name": "David Brown",
-            "sanction_amount": 45000,
-            "disbursed_amount": 40000,
-            "processing_fee": 4500,
-            "interest_amount": 2500,
-            "repayment_amount": 47000
-        },
-        {
-            "id": 6,
-            "disbursal_date": "2025-07-26",
-            "full_name": "Emily Davis",
-            "sanction_amount": 55000,
-            "disbursed_amount": 50000,
-            "processing_fee": 5500,
-            "interest_amount": 3200,
-            "repayment_amount": 58700
-        },
-        {
-            "id": 7,
-            "disbursal_date": "2025-07-27",
-            "full_name": "Robert Miller",
-            "sanction_amount": 65000,
-            "disbursed_amount": 60000,
-            "processing_fee": 6500,
-            "interest_amount": 3800,
-            "repayment_amount": 70300
-        },
-        {
-            "id": 8,
-            "disbursal_date": "2025-08-01",
-            "full_name": "Lisa Garcia",
-            "sanction_amount": 70000,
-            "disbursed_amount": 65000,
-            "processing_fee": 7000,
-            "interest_amount": 4200,
-            "repayment_amount": 76200
-        },
-        {
-            "id": 9,
-            "disbursal_date": "2025-07-15",
-            "full_name": "James Rodriguez",
-            "sanction_amount": 85000,
-            "disbursed_amount": 80000,
-            "processing_fee": 8500,
-            "interest_amount": 5000,
-            "repayment_amount": 93500
-        },
-        {
-            "id": 10,
-            "disbursal_date": "2025-08-20",
-            "full_name": "Maria Martinez",
-            "sanction_amount": 90000,
-            "disbursed_amount": 85000,
-            "processing_fee": 9000,
-            "interest_amount": 5500,
-            "repayment_amount": 99500
-        }
-    ]
-    
-    if start_date and end_date:
-        # Filter applications based on disbursal_date range
-        filtered_applications = [
-            app for app in mock_applications 
-            if start_date <= app["disbursal_date"] <= end_date
-        ]
-        
-        print(f"Table: Filtered applications count: {len(filtered_applications)}")
-        
-        if filtered_applications:
-            base_data = {
-                "applications": filtered_applications,
-                "total_pages": 1,
-                "current_page": 1,
-                "total_items": len(filtered_applications)
-            }
-        else:
-            # No data for selected date range
-            base_data = {
-                "applications": [],
-                "total_pages": 0,
-                "current_page": 1,
-                "total_items": 0
-            }
-    else:
-        # No date range provided, return all data
-        base_data = {
-            "applications": mock_applications,
-            "total_pages": 1,
-            "current_page": 1,
-            "total_items": len(mock_applications)
-        }
+    print(f"📊 Returning {len(page_data)} applications for page {page} of {total_pages}")
+    print(f"📄 Showing items {start_index + 1} to {min(end_index, total_items)} of {total_items}")
+    if page_data:
+        print(f"🔍 First application sample: {page_data[0]}")
     
     return JsonResponse(base_data)
 
 @csrf_exempt
 def date_range(request):
     """API endpoint to get the available date range for disbursal data"""
-    # Mock data - replace with your actual API call to get min/max dates
+    # For now, return a reasonable date range
     # In production, this would query your database for the actual date range
     data = {
-        "min_date": "2023-01-01",  # Replace with actual minimum date from your data
-        "max_date": "2025-12-31",  # Replace with actual maximum date from your data
-        "available_dates": [
-            "2025-01-15",
-            "2025-01-16", 
-            "2025-01-17",
-            "2025-01-18",
-            "2025-01-19",
-            "2025-01-20",
-            "2025-01-21",
-            "2025-01-22",
-            "2025-01-23",
-            "2025-01-24",
-            "2025-01-25",
-            "2025-01-26",
-            "2025-01-27",
-            "2025-01-28",
-            "2025-01-29",
-            "2025-01-30",
-            "2025-01-31"
-        ]
+        "min_date": "2023-01-01",
+        "max_date": "2025-12-31",
+        "available_dates": []
     }
     
     print(f"Date range requested - Min: {data['min_date']}, Max: {data['max_date']}")
     return JsonResponse(data)
+
+@csrf_exempt
+def distinct_values(request):
+    """API endpoint to get distinct values for filters from the API data with cascading filter support"""
+    print(f"🔍 Distinct values endpoint accessed")
+    print(f"🔍 Session data: {dict(request.session)}")
+    print(f"🔍 Session ID: {request.session.session_key}")
+    print(f"🔍 Authenticated: {request.session.get('authenticated')}")
+    
+    if not request.session.get('authenticated'):
+        print("❌ User not authenticated in distinct_values endpoint")
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+    
+    # Get current date range and ALL current filter values from request
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+    reloan_filter = request.GET.get('reloan', '')
+    active_filter = request.GET.get('active', '')
+    tenure_filter = request.GET.get('tenure', '')
+    state_filter = request.GET.get('state', '')
+    city_filter = request.GET.get('city', '')
+    
+    print(f"🔍 Request parameters - start_date: {start_date}, end_date: {end_date}")
+    print(f"🔍 Current filters - reloan: {reloan_filter}, active: {active_filter}, tenure: {tenure_filter}, state: {state_filter}, city: {city_filter}")
+    
+    if not start_date or not end_date:
+        print("❌ Missing start_date or end_date parameters")
+        return JsonResponse({'error': 'Start date and end date are required'}, status=400)
+    
+    print(f"🔍 Fetching distinct values for date range: {start_date} to {end_date}")
+    
+    # Fetch data from Blinkr API
+    apps = fetch_blinkr_data(start_date, end_date)
+    
+    print(f"🔍 Blinkr API returned {len(apps) if apps else 0} applications")
+    
+    if not apps:
+        print("⚠️  No data returned from API for distinct values")
+        return JsonResponse({
+            'tenures': [],
+            'states': [],
+            'cities': []
+        })
+    
+    # Apply current filters to get filtered data first
+    filtered_apps = []
+    for app in apps:
+        # Apply reloan filter
+        if reloan_filter:
+            is_reloan_case = app.get('is_reloan_case', False)
+            if reloan_filter == 'reloan' and not is_reloan_case:
+                continue
+            elif reloan_filter == 'new' and is_reloan_case:
+                continue
+        
+        # Apply active filter
+        if active_filter:
+            is_lead_closed = app.get('is_lead_closed', False)
+            if active_filter == 'active' and is_lead_closed:
+                continue
+            elif active_filter == 'inactive' and not is_lead_closed:
+                continue
+        
+        # Apply tenure filter
+        if tenure_filter:
+            app_tenure = app.get('tenure', 0)
+            try:
+                filter_tenure = int(tenure_filter)
+                if app_tenure != filter_tenure:
+                    continue
+            except (ValueError, TypeError):
+                continue
+        
+        # Apply state filter
+        if state_filter:
+            app_state = app.get('state', '')
+            if app_state != state_filter:
+                continue
+        
+        # Apply city filter
+        if city_filter:
+            app_city = app.get('city', '')
+            if app_city != city_filter:
+                continue
+        
+        filtered_apps.append(app)
+    
+    print(f"🔍 After applying filters: {len(filtered_apps)} applications remain")
+    
+    # Extract distinct values from the FILTERED data
+    tenures = set()
+    states = set()
+    cities = set()
+    
+    for app in filtered_apps:
+        # Extract tenure values
+        tenure = app.get('tenure', 0)
+        if tenure and tenure > 0:
+            tenures.add(tenure)
+        
+        # Extract state values
+        state = app.get('state', '')
+        if state:
+            states.add(state)
+        
+        # Extract city values
+        city = app.get('city', '')
+        if city:
+            cities.add(city)
+    
+    # Convert to sorted lists
+    tenures_list = sorted(list(tenures))
+    states_list = sorted(list(states))
+    cities_list = sorted(list(cities))
+    
+    print(f"🔍 Distinct values found from filtered data:")
+    print(f"   - Tenures: {tenures_list}")
+    print(f"   - States: {states_list}")
+    print(f"   - Cities: {cities_list}")
+    
+    # Sample some filtered data to debug
+    if filtered_apps:
+        print(f"🔍 Sample filtered application data:")
+        sample_app = filtered_apps[0]
+        print(f"   - Sample app keys: {list(sample_app.keys())}")
+        print(f"   - Sample app state: {sample_app.get('state', 'NOT_FOUND')}")
+        print(f"   - Sample app city: {sample_app.get('city', 'NOT_FOUND')}")
+        print(f"   - Sample app tenure: {sample_app.get('tenure', 'NOT_FOUND')}")
+    
+    return JsonResponse({
+        'tenures': tenures_list,
+        'states': states_list,
+        'cities': cities_list
+    })

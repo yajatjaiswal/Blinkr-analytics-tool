@@ -13,4 +13,5 @@ urlpatterns = [
     path('api/charts/', views.charts_data, name='charts_data'),
     path('api/table/', views.table_data, name='table_data'),
     path('api/date-range/', views.date_range, name='date_range'),
+    path('api/distinct-values/', views.distinct_values, name='distinct_values'),
 ]

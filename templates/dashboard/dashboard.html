@@ -2,7 +2,45 @@
 
 {% block title %}Blinkr Loan - Disbursal Dashboard{% endblock %}
 
+{% block extra_head %}
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+{% endblock %}
+
 {% block content %}
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+    <div class="bg-white rounded-lg p-8 flex flex-col items-center space-y-4">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <p class="text-lg font-semibold text-gray-700">Loading data...</p>
+        <p class="text-sm text-gray-500" id="loading-message">Fetching data from Blinkr API</p>
+    </div>
+</div>
+
+<!-- Error Message Overlay -->
+<div id="error-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+    <div class="bg-white rounded-lg p-8 max-w-md mx-4">
+        <div class="flex items-center space-x-3 mb-4">
+            <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900">Error Loading Data</h3>
+        </div>
+        <p class="text-gray-600 mb-4" id="error-message">An error occurred while fetching data.</p>
+        <div class="flex space-x-3">
+            <button id="retry-button" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-300">
+                Retry
+            </button>
+            <button id="close-error" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors duration-300">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
 <div class="flex h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
          <!-- Enhanced Sidebar Filters -->
      <div class="sidebar fixed md:relative md:translate-x-0 z-40 w-72 sidebar-transition shadow-strong" style="background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%); border-right: 1px solid rgba(255, 255, 255, 0.2);">
@@ -54,10 +92,6 @@
                      </label>
                     <select class="enhanced-filter-dropdown w-full" id="tenure-filter">
                         <option value="">All Tenures</option>
-                        <option value="6">6 months</option>
-                        <option value="12">12 months</option>
-                        <option value="18">18 months</option>
-                        <option value="24">24 months</option>
                     </select>
                 </div>
                 
@@ -128,34 +162,52 @@
                  
                  <!-- Enhanced Controls Section -->
                  <div class="flex flex-col lg:flex-row items-center space-y-3 lg:space-y-0 lg:space-x-14">
-                     <!-- Logout Button -->
-                     <a href="/logout/" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-300 flex items-center space-x-2 shadow-glow">
-                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                         </svg>
-                         <span>Logout</span>
-                     </a>
+                                           <!-- Logout Button -->
+                      <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-300 flex items-center space-x-2 shadow-glow">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                          </svg>
+                          <span>Logout</span>
+                      </button>
                      
                      <!-- Enhanced Date Range Filter -->
-                     <div class="flex flex-col space-y-2">
-                         <div class="flex items-center space-x-2 bg-white/60 backdrop-blur-sm rounded-lg p-2 shadow-soft">
-                             <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                             </svg>
-                             <input type="date" id="start-date" class="enhanced-date-input" value="2025-08-23">
-                             <span class="text-gray-500 font-medium">to</span>
-                             <input type="date" id="end-date" class="enhanced-date-input" value="2025-08-23">
+                     <div class="flex flex-col space-y-3">
+                         <div class="date-range-container">
+                             <div class="flex items-center space-x-3">
+                                 <div class="flex items-center space-x-2 text-blue-600">
+                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                     </svg>
+                                 </div>
+                                 <input type="date" id="start-date" class="enhanced-date-input">
+                                 <span class="text-gray-500 font-medium text-sm">to</span>
+                                 <input type="date" id="end-date" class="enhanced-date-input">
+                             </div>
                          </div>
-                         <div class="text-xs text-gray-600 text-center bg-white/40 rounded px-2 py-1" id="date-range-display">
-                             Date Range: Loading...
-                         </div>
+                                                   <div class="text-xs text-gray-600 text-center bg-white/60 backdrop-blur-sm rounded-lg px-3 py-2 shadow-soft border border-gray-100" id="date-range-display">
+                              Date Range: Loading...
+                          </div>
+                          <!-- Auto-refresh indicator -->
+                          <div class="flex items-center justify-center space-x-2">
+                              <div class="flex items-center space-x-1 text-xs text-green-600 font-medium bg-white/60 backdrop-blur-sm rounded-lg px-3 py-2 shadow-soft border border-gray-100">
+                                  <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                  <span>Auto-updating every 10s</span>
+                              </div>
+                          </div>
+                          
                      </div>
                      
                      <!-- Enhanced Avg Disbursal Amount Card -->
                      <div class="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl px-4 py-3 text-white shadow-glow hover:shadow-glow-lg transition-all duration-300 hover-lift">
                          <div class="text-xs font-medium text-blue-100">Avg. Disbursal Amount</div>
                          <div class="text-xl font-bold" id="avg-disbursal">₹27,570.76</div>
-                         <div class="text-xs text-blue-200 mt-1">Updated today</div>
+                         <div class="text-xs text-blue-200 mt-1" id="data-source">Updated today</div>
+                         <div class="text-xs text-blue-200 mt-1" id="api-status" style="display: none;">
+                             <span class="inline-flex items-center">
+                                 <span class="w-2 h-2 bg-green-400 rounded-full mr-1 animate-pulse"></span>
+                                 Live from Blinkr API
+                             </span>
+                         </div>
                      </div>
                  </div>
              </div>
@@ -316,6 +368,159 @@
                  </div>
             </div>
 
+            <!-- Additional Metrics Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+                <!-- Collection Rate Card -->
+                <div class="enhanced-stat-card animate-on-scroll group hover:scale-105 transition-all duration-500">
+                    <div class="relative overflow-hidden">
+                        <!-- Animated Background Pattern -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-50 to-teal-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        <!-- Header Icon at Top Center -->
+                        <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+                            <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-glow">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <!-- Content -->
+                        <div class="relative pt-16 pb-4 px-4 text-center flex flex-col justify-between" style="min-height: 80px;">
+                            <div class="flex-1 flex flex-col justify-center min-h-8">
+                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Collection Rate">Collection Rate</p>
+                            </div>
+                            <div class="flex-1 flex flex-col justify-center">
+                                <p class="text-lg font-bold text-gray-900" id="collection-rate">84.8%</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pending Collections Card -->
+                <div class="enhanced-stat-card animate-on-scroll group hover:scale-105 transition-all duration-500">
+                    <div class="relative overflow-hidden">
+                        <!-- Animated Background Pattern -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-red-50 to-pink-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        <!-- Header Icon at Top Center -->
+                        <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+                            <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-glow">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <!-- Content -->
+                        <div class="relative pt-16 pb-4 px-4 text-center flex flex-col justify-between" style="min-height: 80px;">
+                            <div class="flex-1 flex flex-col justify-center min-h-8">
+                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Pending Collections">Pending Collections</p>
+                            </div>
+                            <div class="flex-1 flex flex-col justify-center">
+                                <p class="text-lg font-bold text-gray-900" id="pending-collections">₹1,41,044</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Overdue Amount Card -->
+                <div class="enhanced-stat-card animate-on-scroll group hover:scale-105 transition-all duration-500">
+                    <div class="relative overflow-hidden">
+                        <!-- Animated Background Pattern -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-orange-50 to-amber-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        <!-- Header Icon at Top Center -->
+                        <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+                            <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl flex items-center justify-center shadow-glow">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <!-- Content -->
+                        <div class="relative pt-16 pb-4 px-4 text-center flex flex-col justify-between" style="min-height: 80px;">
+                            <div class="flex-1 flex flex-col justify-center min-h-8">
+                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Overdue Amount">Overdue Amount</p>
+                            </div>
+                            <div class="flex-1 flex flex-col justify-center">
+                                <p class="text-lg font-bold text-gray-900" id="overdue-amount">₹89,567</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recovery Rate Card -->
+                <div class="enhanced-stat-card animate-on-scroll group hover:scale-105 transition-all duration-500">
+                    <div class="relative overflow-hidden">
+                        <!-- Animated Background Pattern -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-cyan-50 to-blue-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        <!-- Header Icon at Top Center -->
+                        <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+                            <div class="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-glow">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <!-- Content -->
+                        <div class="relative pt-16 pb-4 px-4 text-center flex flex-col justify-between" style="min-height: 80px;">
+                            <div class="flex-1 flex flex-col justify-center min-h-8">
+                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Recovery Rate">Recovery Rate</p>
+                            </div>
+                            <div class="flex-1 flex flex-col justify-center">
+                                <p class="text-lg font-bold text-gray-900" id="recovery-rate">92.3%</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Average Tenure Card -->
+                <div class="enhanced-stat-card animate-on-scroll group hover:scale-105 transition-all duration-500">
+                    <div class="relative overflow-hidden">
+                        <!-- Animated Background Pattern -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-violet-50 to-purple-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        <!-- Header Icon at Top Center -->
+                        <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+                            <div class="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-glow">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <!-- Content -->
+                        <div class="relative pt-16 pb-4 px-4 text-center flex flex-col justify-between" style="min-height: 80px;">
+                            <div class="flex-1 flex flex-col justify-center min-h-8">
+                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Average Tenure">Average Tenure</p>
+                            </div>
+                            <div class="flex-1 flex flex-col justify-center">
+                                <p class="text-lg font-bold text-gray-900" id="average-tenure">28 days</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Loans Card -->
+                <div class="enhanced-stat-card animate-on-scroll group hover:scale-105 transition-all duration-500">
+                    <div class="relative overflow-hidden">
+                        <!-- Animated Background Pattern -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-lime-50 to-green-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        <!-- Header Icon at Top Center -->
+                        <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+                            <div class="w-12 h-12 bg-gradient-to-br from-lime-500 to-green-600 rounded-2xl flex items-center justify-center shadow-glow">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <!-- Content -->
+                        <div class="relative pt-16 pb-4 px-4 text-center flex flex-col justify-between" style="min-height: 80px;">
+                            <div class="flex-1 flex flex-col justify-center min-h-8">
+                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Active Loans">Active Loans</p>
+                            </div>
+                            <div class="flex-1 flex flex-col justify-center">
+                                <p class="text-lg font-bold text-gray-900" id="active-loans">13</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Enhanced Charts Section -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                 <!-- Enhanced State Wise Distribution -->
@@ -324,9 +529,9 @@
                         <h3 class="text-xl font-bold text-gray-900">State Wise Distribution</h3>
                         <div class="w-3 h-3 bg-blue-500 rounded-full animate-pulse-gentle"></div>
                     </div>
-                    <div class="chart-container">
-                        <canvas id="stateChart"></canvas>
-                    </div>
+                                         <div class="chart-container relative">
+                         <canvas id="stateChart"></canvas>
+                     </div>
                 </div>
 
                 <!-- Enhanced City Wise Distribution -->
@@ -335,9 +540,9 @@
                         <h3 class="text-xl font-bold text-gray-900">City Wise Distribution</h3>
                         <div class="w-3 h-3 bg-indigo-500 rounded-full animate-pulse-gentle"></div>
                     </div>
-                    <div class="chart-container">
-                        <canvas id="cityChart"></canvas>
-                    </div>
+                                         <div class="chart-container relative">
+                         <canvas id="cityChart"></canvas>
+                     </div>
                 </div>
             </div>
 
@@ -361,10 +566,16 @@
                         <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
                             <div class="relative">
                                 <input type="text" id="search-input" placeholder="Search by name..." 
-                                       class="enhanced-search-input pl-12 w-full sm:w-80">
+                                       class="enhanced-search-input pl-12 pr-10 w-full sm:w-80">
                                 <svg class="absolute left-4 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                                 </svg>
+                                <!-- Clear search button -->
+                                <button id="clear-search" class="absolute right-3 top-3 w-4 h-4 text-gray-400 hover:text-gray-600 hidden" title="Clear search">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
                             </div>
                             
                             <div class="flex items-center space-x-3">
@@ -433,32 +644,71 @@ class Dashboard {
         this.stateChart = null;
         this.cityChart = null;
         this.applicationsData = [];
+        this.debounceTimer = null;
+        this.searchTimer = null;
+        this.autoRefreshInterval = null;
+        this.sessionTimeoutTimer = null;
+        this.loadingDistinctValues = false;
         this.init();
     }
 
     async init() {
+        console.log('🚀 Dashboard initialization started');
+        
+        try {
+            // Check if user is authenticated
+            const response = await fetch('/api/summary/');
+            if (!response.ok) {
+                console.log('❌ User not authenticated, redirecting to login');
+                window.location.href = '/login/';
+                return;
+            }
+        } catch (error) {
+            console.error('Error checking authentication:', error);
+            window.location.href = '/login/';
+            return;
+        }
+        
         // Set dynamic default dates based on available data
         this.setDefaultDates();
         
+        console.log('🚀 Initializing dashboard...');
+        
+        // Check authentication status first
+        if (!this.checkAuthentication()) {
+            console.log('❌ Authentication check failed, redirecting to login');
+            window.location.href = '/login/';
+            return;
+        }
+        
         await this.loadSummaryData();
+        await this.loadDistinctValues();
         await this.loadChartsData();
         await this.loadTableData();
         this.setupEventListeners();
         this.initializeAnimations();
+        
+        // Start auto-refresh after 10 seconds (always enabled)
+        this.startAutoRefresh();
+        
+        // Prevent back button access
+        this.preventBackButtonAccess();
+        
+        // Start session timeout monitoring
+        this.startSessionTimeoutMonitor();
+        
+        console.log('✅ Dashboard initialization complete');
     }
     
     setDefaultDates() {
-        // Set default dates to last 30 days
+        // Set default dates to today's date
         const today = new Date();
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(today.getDate() - 30);
         
         // Format dates for input fields (YYYY-MM-DD)
         const todayStr = today.toISOString().split('T')[0];
-        const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
         
-        // Set the date input values
-        document.getElementById('start-date').value = thirtyDaysAgoStr;
+        // Set the date input values to today for both start and end
+        document.getElementById('start-date').value = todayStr;
         document.getElementById('end-date').value = todayStr;
         
         // Set min/max attributes for date inputs based on available data
@@ -467,7 +717,7 @@ class Dashboard {
         // Update the date range display
         this.updateDateRangeDisplay();
         
-        console.log(`Default dates set: ${thirtyDaysAgoStr} to ${todayStr}`);
+        console.log(`Default dates set: ${todayStr} to ${todayStr} (today)`);
     }
     
     async setDateConstraints() {
@@ -544,6 +794,8 @@ class Dashboard {
             alert('Start date cannot be after end date. Please select a valid date range.');
             document.getElementById('end-date').value = startDate;
             console.log('Date range validation: End date reset to start date');
+            // Trigger data reload after resetting the date
+            setTimeout(() => this.debouncedLoadData(), 100);
         }
     }
     
@@ -567,7 +819,13 @@ class Dashboard {
         if (startDate && endDate) {
             const start = new Date(startDate).toLocaleDateString('en-IN');
             const end = new Date(endDate).toLocaleDateString('en-IN');
-            displayElement.textContent = `Date Range: ${start} to ${end}`;
+            const isSameDate = startDate === endDate;
+            
+            if (isSameDate) {
+                displayElement.textContent = `Date: ${start} (single day)`;
+            } else {
+                displayElement.textContent = `Date Range: ${start} to ${end} (inclusive)`;
+            }
         } else {
             displayElement.textContent = 'Date Range: Please select dates';
         }
@@ -581,52 +839,684 @@ class Dashboard {
         });
     }
 
-    async loadSummaryData() {
+        async loadSummaryData() {
         try {
             // Get date range values
             const startDate = document.getElementById('start-date').value;
             const endDate = document.getElementById('end-date').value;
+            const isSameDate = startDate === endDate;
             
-            console.log(`Loading summary data for date range: ${startDate} to ${endDate}`);
+            console.log(`Loading summary data for date range: ${startDate} to ${endDate} (inclusive)`);
+            if (isSameDate) {
+                console.log(`🎯 Same date detected: ${startDate} - Loading data for single day`);
+            } else {
+                console.log(`📅 Date range: ${startDate} to ${endDate} - Will include data from both dates`);
+            }
             
-            // Use local Django API endpoint with date parameters
-            const url = `/api/summary/?start_date=${startDate}&end_date=${endDate}`;
+            // Validate that we have both dates
+            if (!startDate || !endDate) {
+                console.warn('Missing start or end date, cannot load data');
+                return;
+            }
+            
+            // Show loading overlay
+            this.showLoading('Fetching data...');
+            
+            // Use Django API endpoint for summary data
+            let url = `/api/summary/?start_date=${startDate}&end_date=${endDate}`;
+            
+            // Add filter parameters
+            const reloanFilter = document.getElementById('reloan-filter').value;
+            const activeFilter = document.getElementById('active-filter').value;
+            const tenureFilter = document.getElementById('tenure-filter').value;
+            const stateFilter = document.getElementById('state-filter').value;
+            const cityFilter = document.getElementById('city-filter').value;
+            
+            if (reloanFilter) url += `&reloan=${encodeURIComponent(reloanFilter)}`;
+            if (activeFilter) url += `&active=${encodeURIComponent(activeFilter)}`;
+            if (tenureFilter) url += `&tenure=${encodeURIComponent(tenureFilter)}`;
+            if (stateFilter) url += `&state=${encodeURIComponent(stateFilter)}`;
+            if (cityFilter) url += `&city=${encodeURIComponent(cityFilter)}`;
             console.log(`API URL: ${url}`);
             
             const response = await fetch(url);
+            console.log(`API Response status: ${response.status}`);
+            
+            if (!response.ok) {
+                throw new Error(`API request failed with status ${response.status}`);
+            }
+            
             const data = await response.json();
+            console.log('API Response data:', data);
             
             if (data) {
-                // Update dashboard elements with local data
-                document.getElementById('total-applications').textContent = data.total_applications;
-                document.getElementById('sanction-amount').textContent = `₹${this.formatNumber(data.total_sanction_amount)}`;
-                document.getElementById('disbursed-amount').textContent = `₹${this.formatNumber(data.total_disbursed_amount)}`;
-                document.getElementById('pf-amount').textContent = `₹${this.formatNumber(data.total_pf_amount)}`;
-                document.getElementById('interest-amount').textContent = `₹${this.formatNumber(data.total_interest_amount)}`;
-                document.getElementById('repayment-amount').textContent = `₹${this.formatNumber(data.total_repayment_amount)}`;
-                document.getElementById('avg-disbursal').textContent = `₹${this.formatNumber(data.avg_disbursal)}`;
+                // Update dashboard elements with data
+                this.updateDashboardWithData(data);
                 
                 // Load charts and table data with same date range
                 await this.loadChartsData();
                 await this.loadTableData();
+                
+                if (isSameDate) {
+                    console.log(`✅ Same date data loaded successfully: ${data.total_applications} applications for ${startDate}`);
+                }
             }
+            
+            // Hide loading overlay
+            this.hideLoading();
+            
         } catch (error) {
             console.error('Error loading summary data:', error);
-            // Fallback to default values
-            this.loadDefaultData();
+            this.hideLoading();
+            
+            // Check if this is an authentication error
+            if (error.message && error.message.includes('401')) {
+                console.log('❌ Authentication expired, redirecting to login');
+                window.location.href = '/login/';
+                return;
+            }
+            
+            // Check if this is a same date issue
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const isSameDate = startDate === endDate;
+            
+            if (isSameDate) {
+                this.showError(`No data available for ${new Date(startDate).toLocaleDateString('en-IN')}. The Blinkr API might not support same start/end dates. Try selecting a date range instead.`);
+            } else {
+                this.showError('Failed to load data. Please try again.');
+            }
+            // No fallback - API data required
         }
     }
     
-    loadDefaultData() {
-        // Set default values if API fails
-        document.getElementById('total-applications').textContent = '17';
-        document.getElementById('sanction-amount').textContent = '₹4,68,703';
-        document.getElementById('disbursed-amount').textContent = '₹3,97,875';
-        document.getElementById('pf-amount').textContent = '₹70,303';
-        document.getElementById('interest-amount').textContent = '₹70,216';
-        document.getElementById('repayment-amount').textContent = '₹5,38,919';
-        document.getElementById('avg-disbursal').textContent = '₹27,570.76';
+    async loadDistinctValues() {
+        try {
+            console.log('🔍 loadDistinctValues() called');
+            
+            // Prevent multiple simultaneous calls
+            if (this.loadingDistinctValues) {
+                console.log('🔍 loadDistinctValues already in progress, skipping');
+                return;
+            }
+            this.loadingDistinctValues = true;
+            
+            // Get current date range values
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            
+            console.log(`🔍 Date range values - startDate: "${startDate}", endDate: "${endDate}"`);
+            
+            if (!startDate || !endDate) {
+                console.log('❌ No date range selected, skipping distinct values load');
+                return;
+            }
+            
+            // Get ALL current filter values for cascading filter support
+            const reloanFilter = document.getElementById('reloan-filter').value;
+            const activeFilter = document.getElementById('active-filter').value;
+            const tenureFilter = document.getElementById('tenure-filter').value;
+            const stateFilter = document.getElementById('state-filter').value;
+            const cityFilter = document.getElementById('city-filter').value;
+            
+            console.log(`🔍 Current filter values - reloan: "${reloanFilter}", active: "${activeFilter}", tenure: "${tenureFilter}", state: "${stateFilter}", city: "${cityFilter}"`);
+            
+            console.log(`🔍 Loading distinct values for date range: ${startDate} to ${endDate} with cascading filters`);
+            
+            // Call the API endpoint with ALL current filter values
+            let url = `/api/distinct-values/?start_date=${startDate}&end_date=${endDate}`;
+            if (reloanFilter) url += `&reloan=${encodeURIComponent(reloanFilter)}`;
+            if (activeFilter) url += `&active=${encodeURIComponent(activeFilter)}`;
+            if (tenureFilter) url += `&tenure=${encodeURIComponent(tenureFilter)}`;
+            if (stateFilter) url += `&state=${encodeURIComponent(stateFilter)}`;
+            if (cityFilter) url += `&city=${encodeURIComponent(cityFilter)}`;
+            
+            console.log(`🔍 Calling API endpoint: ${url}`);
+            
+            const response = await fetch(url);
+            console.log(`🔍 API response status: ${response.status}`);
+            console.log(`🔍 API response headers:`, response.headers);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`❌ API request failed: ${response.status} - ${errorText}`);
+                throw new Error(`Failed to fetch distinct values: ${response.status} - ${errorText}`);
+            }
+            
+            const data = await response.json();
+            console.log('✅ Distinct values received:', data);
+            
+            // Populate tenure filter dropdown with filtered options
+            this.populateTenureFilter(data.tenures);
+            
+            // Populate state filter dropdown with filtered options
+            this.populateStateFilter(data.states);
+            
+            // Populate city filter dropdown with filtered options
+            this.populateCityFilter(data.cities);
+            
+        } catch (error) {
+            console.error('❌ Error loading distinct values:', error);
+            // Don't show error to user, just log it
+        } finally {
+            // Reset the loading flag
+            this.loadingDistinctValues = false;
+        }
     }
+    
+    populateTenureFilter(tenures) {
+        const tenureFilter = document.getElementById('tenure-filter');
+        if (!tenureFilter) return;
+        
+        // Store current selection to preserve it
+        const currentSelection = tenureFilter.value;
+        console.log(`🔍 Current tenure filter selection: "${currentSelection}"`);
+        
+        // Keep the "All Tenures" option
+        tenureFilter.innerHTML = '<option value="">All Tenures</option>';
+        
+        // Add dynamic options
+        if (tenures && tenures.length > 0) {
+            tenures.forEach(tenure => {
+                const option = document.createElement('option');
+                option.value = tenure;
+                option.textContent = `${tenure} days`;
+                tenureFilter.appendChild(option);
+            });
+            console.log(`✅ Populated tenure filter with ${tenures.length} options`);
+            
+            // Restore previous selection if it still exists in new options
+            if (currentSelection && tenures.includes(parseInt(currentSelection))) {
+                tenureFilter.value = currentSelection;
+                console.log(`✅ Restored tenure filter selection to: "${currentSelection}"`);
+            } else if (currentSelection) {
+                console.log(`⚠️ Previous tenure selection "${currentSelection}" not found in new options, resetting to "All Tenures"`);
+            }
+        } else {
+            console.log('⚠️ No tenure values available from API');
+        }
+    }
+    
+        populateStateFilter(states) {
+        console.log('🔍 populateStateFilter() called with states:', states);
+        const stateFilter = document.getElementById('state-filter');
+        if (!stateFilter) {
+            console.error('❌ State filter element not found');
+            return;
+        }
+
+        // Store current selection to preserve it
+        const currentSelection = stateFilter.value;
+        console.log(`🔍 Current state filter selection: "${currentSelection}"`);
+
+        // Keep the "All States" option
+        stateFilter.innerHTML = '<option value="">All States</option>';
+
+        // Add dynamic options
+        if (states && states.length > 0) {
+            states.forEach(state => {
+                const option = document.createElement('option');
+                option.value = state;
+                option.textContent = state;
+                stateFilter.appendChild(option);
+            });
+            console.log(`✅ Populated state filter with ${states.length} options`);
+            
+            // Restore previous selection if it still exists in new options
+            if (currentSelection && states.includes(currentSelection)) {
+                stateFilter.value = currentSelection;
+                console.log(`✅ Restored state filter selection to: "${currentSelection}"`);
+            } else if (currentSelection) {
+                console.log(`⚠️ Previous state selection "${currentSelection}" not found in new options, resetting to "All States"`);
+            }
+            
+            // Debug: Check if options are actually there
+            setTimeout(() => {
+                const options = stateFilter.querySelectorAll('option');
+                console.log(`🔍 State filter options after population: ${options.length} options`);
+                options.forEach((opt, idx) => {
+                    console.log(`   Option ${idx}: value="${opt.value}", text="${opt.textContent}"`);
+                });
+            }, 100);
+        } else {
+            console.log('⚠️ No state values available from API');
+        }
+    }
+    
+        populateCityFilter(cities) {
+        console.log('🔍 populateCityFilter() called with cities:', cities);
+        const cityFilter = document.getElementById('city-filter');
+        if (!cityFilter) {
+            console.error('❌ City filter element not found');
+            return;
+        }
+        
+        // Store current selection to preserve it
+        const currentSelection = cityFilter.value;
+        console.log(`🔍 Current city filter selection: "${currentSelection}"`);
+        
+        // Get current state filter to show in debug message
+        const currentState = document.getElementById('state-filter').value;
+        const stateInfo = currentState ? ` (filtered by state: ${currentState})` : ' (all states)';
+        
+        // Keep the "All Cities" option
+        cityFilter.innerHTML = '<option value="">All Cities</option>';
+
+        // Add dynamic options
+        if (cities && cities.length > 0) {
+            cities.forEach(city => {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                cityFilter.appendChild(option);
+            });
+            console.log(`✅ Populated city filter with ${cities.length} options${stateInfo}`);
+            
+            // Restore previous selection if it still exists in new options
+            if (currentSelection && cities.includes(currentSelection)) {
+                cityFilter.value = currentSelection;
+                console.log(`✅ Restored city filter selection to: "${currentSelection}"`);
+            } else if (currentSelection) {
+                console.log(`⚠️ Previous city selection "${currentSelection}" not found in new options, resetting to "All Cities"`);
+            }
+            
+            // Debug: Check if options are actually there
+            setTimeout(() => {
+                const options = cityFilter.querySelectorAll('option');
+                console.log(`🔍 City filter options after population: ${options.length} options`);
+                options.forEach((opt, idx) => {
+                    console.log(`   Option ${idx}: value="${opt.value}", text="${opt.textContent}"`);
+                });
+            }, 100);
+        } else {
+            console.log(`⚠️ No city values available from API${stateInfo}`);
+        }
+    }
+    
+    updateDashboardWithData(data) {
+        // Update dashboard elements with data
+        document.getElementById('total-applications').textContent = data.total_applications;
+        document.getElementById('sanction-amount').textContent = `₹${this.formatNumber(data.total_sanction_amount)}`;
+        document.getElementById('disbursed-amount').textContent = `₹${this.formatNumber(data.total_disbursed_amount)}`;
+        document.getElementById('pf-amount').textContent = `₹${this.formatNumber(data.total_pf_amount)}`;
+        document.getElementById('interest-amount').textContent = `₹${this.formatNumber(data.total_interest_amount)}`;
+        document.getElementById('repayment-amount').textContent = `₹${this.formatNumber(data.total_repayment_amount)}`;
+        document.getElementById('avg-disbursal').textContent = `₹${this.formatNumber(data.avg_disbursal)}`;
+        
+        // Show API status indicator
+        this.showApiStatus(true);
+    }
+    
+    // Removed loadChartsDataFromBlinkr function
+    
+    // Removed loadTableDataFromBlinkr function
+    
+    // Removed processBlinkrStateData function
+    
+    // Removed processBlinkrCityData function
+    
+    showLoading(message = 'Loading...') {
+        const overlay = document.getElementById('loading-overlay');
+        const messageElement = document.getElementById('loading-message');
+        
+        if (messageElement) {
+            messageElement.textContent = message;
+        }
+        
+        if (overlay) {
+            overlay.classList.remove('hidden');
+        }
+    }
+    
+    hideLoading() {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+        }
+    }
+    
+    showError(message) {
+        const overlay = document.getElementById('error-overlay');
+        const messageElement = document.getElementById('error-message');
+        
+        if (messageElement) {
+            messageElement.textContent = message;
+        }
+        
+        if (overlay) {
+            overlay.classList.remove('hidden');
+        }
+    }
+    
+    hideError() {
+        const overlay = document.getElementById('error-overlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+        }
+    }
+    
+    debouncedLoadData() {
+        // Clear existing timer
+        if (this.debounceTimer) {
+            clearTimeout(this.debounceTimer);
+        }
+        
+        // Set new timer to load data after 500ms of no changes
+        this.debounceTimer = setTimeout(() => {
+            console.log('Debounced API call triggered');
+            this.loadSummaryData();
+        }, 500);
+    }
+    
+    showApiStatus(show) {
+        const dataSource = document.getElementById('data-source');
+        const apiStatus = document.getElementById('api-status');
+        
+        if (dataSource && apiStatus) {
+            if (show) {
+                dataSource.style.display = 'none';
+                apiStatus.style.display = 'block';
+            } else {
+                dataSource.style.display = 'block';
+                apiStatus.style.display = 'none';
+            }
+        }
+    }
+    
+    checkAuthentication() {
+        // Check if we have a valid session
+        try {
+            // Try to make a simple API call to check authentication
+            const testUrl = '/api/summary/?start_date=2025-08-25&end_date=2025-08-25';
+            fetch(testUrl, { method: 'GET' })
+                .then(response => {
+                    if (response.status === 401) {
+                        console.log('❌ Authentication expired, redirecting to login');
+                        window.location.href = '/login/';
+                        return false;
+                    }
+                })
+                .catch(error => {
+                    console.log('❌ Authentication check failed:', error);
+                    window.location.href = '/login/';
+                    return false;
+                });
+            
+            return true; // Allow initialization to continue
+        } catch (error) {
+            console.error('❌ Authentication check error:', error);
+            return false;
+        }
+    }
+    
+    preventBackButtonAccess() {
+        // Prevent back button access after logout
+        window.history.pushState(null, null, window.location.href);
+        window.addEventListener('popstate', () => {
+            window.history.pushState(null, null, window.location.href);
+            console.log('⚠️ Back button access prevented');
+        });
+        
+        // Also prevent page refresh from restoring cached state
+        window.addEventListener('beforeunload', () => {
+            // Clear any cached data
+            sessionStorage.clear();
+            localStorage.clear();
+        });
+    }
+    
+    confirmLogout() {
+        if (confirm('Are you sure you want to logout? You will need to login again to access the dashboard.')) {
+            this.performLogout();
+        }
+    }
+    
+    async performLogout() {
+        try {
+            console.log('🚪 Performing logout...');
+            
+            // Stop auto-refresh and session monitoring
+            this.stopAutoRefresh();
+            this.stopSessionTimeoutMonitor();
+            
+            // Clear any cached data
+            sessionStorage.clear();
+            localStorage.clear();
+            
+            // Clear any timers
+            if (this.debounceTimer) {
+                clearTimeout(this.debounceTimer);
+            }
+            if (this.searchTimer) {
+                clearTimeout(this.searchTimer);
+            }
+            
+            // Redirect to logout endpoint
+            window.location.href = '/logout/';
+            
+        } catch (error) {
+            console.error('Error during logout:', error);
+            // Force redirect anyway
+            window.location.href = '/logout/';
+        }
+    }
+    
+    startSessionTimeoutMonitor() {
+        // Set session timeout to 30 minutes (1800000 ms)
+        const SESSION_TIMEOUT = 30 * 60 * 1000;
+        
+        // Reset timeout on user activity
+        const resetTimeout = () => {
+            if (this.sessionTimeoutTimer) {
+                clearTimeout(this.sessionTimeoutTimer);
+            }
+            this.sessionTimeoutTimer = setTimeout(() => {
+                console.log('⏰ Session timeout - logging out user');
+                alert('Your session has expired due to inactivity. Please login again.');
+                this.performLogout();
+            }, SESSION_TIMEOUT);
+        };
+        
+        // Reset timeout on various user activities
+        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+        events.forEach(event => {
+            document.addEventListener(event, resetTimeout, true);
+        });
+        
+        // Start the initial timeout
+        resetTimeout();
+        
+        console.log('⏰ Session timeout monitor started (30 minutes)');
+    }
+    
+    showSameDateMessage(date) {
+        // Show a temporary message when same date is selected
+        const dateRangeDisplay = document.getElementById('date-range-display');
+        if (dateRangeDisplay) {
+            const originalText = dateRangeDisplay.textContent;
+            dateRangeDisplay.textContent = `Loading data for ${new Date(date).toLocaleDateString('en-IN')}...`;
+            dateRangeDisplay.style.color = '#059669'; // Green color
+            dateRangeDisplay.style.fontWeight = '600';
+            
+            // Reset after 3 seconds
+            setTimeout(() => {
+                dateRangeDisplay.style.color = '';
+                dateRangeDisplay.style.fontWeight = '';
+                this.updateDateRangeDisplay();
+            }, 3000);
+        }
+    }
+    
+    startAutoRefresh() {
+        if (this.autoRefreshInterval) {
+            clearInterval(this.autoRefreshInterval);
+        }
+        
+        // Start auto-refresh every 10 seconds
+        this.autoRefreshInterval = setInterval(() => {
+            console.log('🔄 Auto-refresh: Fetching latest data for inclusive date range...');
+            this.autoRefreshData();
+        }, 10000); // 10 seconds
+        
+        console.log('✅ Auto-refresh started: Will refresh data every 10 seconds');
+    }
+    
+    stopAutoRefresh() {
+        if (this.autoRefreshInterval) {
+            clearInterval(this.autoRefreshInterval);
+            this.autoRefreshInterval = null;
+            console.log('⏹️ Auto-refresh stopped');
+        }
+    }
+    
+    stopSessionTimeoutMonitor() {
+        if (this.sessionTimeoutTimer) {
+            clearTimeout(this.sessionTimeoutTimer);
+            this.sessionTimeoutTimer = null;
+            console.log('⏹️ Session timeout monitor stopped');
+        }
+    }
+    
+    async autoRefreshData() {
+        try {
+            // Get current date range
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            
+            if (!startDate || !endDate) {
+                console.log('Auto-refresh: No date range set, skipping refresh');
+                return;
+            }
+            
+            // Get current filter values to preserve them during auto-refresh
+            const reloanFilter = document.getElementById('reloan-filter').value;
+            const activeFilter = document.getElementById('active-filter').value;
+            const tenureFilter = document.getElementById('tenure-filter').value;
+            const stateFilter = document.getElementById('state-filter').value;
+            const cityFilter = document.getElementById('city-filter').value;
+            
+            // Debug: Check current filter states before auto-refresh
+            console.log('🔍 Auto-refresh: Current filter states:');
+            console.log(`   - Reloan: "${reloanFilter}"`);
+            console.log(`   - Active: "${activeFilter}"`);
+            console.log(`   - Tenure: "${tenureFilter}"`);
+            console.log(`   - State: "${stateFilter}"`);
+            console.log(`   - City: "${cityFilter}"`);
+            
+            // Debug: Check current filter dropdown options
+            const stateFilterEl = document.getElementById('state-filter');
+            const cityFilterEl = document.getElementById('city-filter');
+            if (stateFilterEl) {
+                const stateOptions = stateFilterEl.querySelectorAll('option');
+                console.log(`🔍 Auto-refresh: State filter has ${stateOptions.length} options before refresh`);
+            }
+            if (cityFilterEl) {
+                const cityOptions = cityFilterEl.querySelectorAll('option');
+                console.log(`🔍 Auto-refresh: City filter has ${cityOptions.length} options before refresh`);
+            }
+            
+            // Show subtle loading indicator without full overlay
+            this.showAutoRefreshIndicator();
+            
+            // Fetch latest data silently (no loading overlay) with current filters
+            let url = `/api/summary/?start_date=${startDate}&end_date=${endDate}`;
+            
+            // Add filter parameters to preserve current filter state
+            if (reloanFilter) url += `&reloan=${encodeURIComponent(reloanFilter)}`;
+            if (activeFilter) url += `&active=${encodeURIComponent(activeFilter)}`;
+            if (tenureFilter) url += `&tenure=${encodeURIComponent(tenureFilter)}`;
+            if (stateFilter) url += `&state=${encodeURIComponent(stateFilter)}`;
+            if (cityFilter) url += `&city=${encodeURIComponent(cityFilter)}`;
+            
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`Auto-refresh API request failed with status ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data) {
+                // Update dashboard elements with latest data
+                this.updateDashboardWithData(data);
+                
+                // Update charts and table data with current filters
+                await this.loadChartsData();
+                await this.loadTableData();
+                
+                // Refresh distinct values to keep filters populated with current filter context
+                setTimeout(async () => {
+                    await this.loadDistinctValues();
+                    
+                    // Restore the previously selected filter values after refreshing options
+                    if (reloanFilter) document.getElementById('reloan-filter').value = reloanFilter;
+                    if (activeFilter) document.getElementById('active-filter').value = activeFilter;
+                    if (tenureFilter) document.getElementById('tenure-filter').value = tenureFilter;
+                    if (stateFilter) document.getElementById('state-filter').value = stateFilter;
+                    if (cityFilter) document.getElementById('city-filter').value = cityFilter;
+                    
+                    console.log('✅ Auto-refresh: Filter selections restored after distinct values refresh');
+                }, 100);
+                
+                // Show chart update indicator
+                this.showChartUpdateIndicator();
+                
+                console.log(`✅ Auto-refresh completed: ${data.total_applications} applications updated for inclusive date range with filters preserved`);
+                
+                // Show success indicator briefly
+                this.showAutoRefreshSuccess();
+            }
+            
+        } catch (error) {
+            console.error('Auto-refresh error:', error);
+            // Don't show error overlay for auto-refresh failures
+            // Just log the error and continue
+        } finally {
+            // Hide auto-refresh indicator
+            this.hideAutoRefreshIndicator();
+        }
+    }
+    
+    showAutoRefreshIndicator() {
+        // Add a subtle indicator to show auto-refresh is happening
+        const dateRangeDisplay = document.getElementById('date-range-display');
+        if (dateRangeDisplay) {
+            const originalText = dateRangeDisplay.textContent;
+            dateRangeDisplay.setAttribute('data-original-text', originalText);
+            dateRangeDisplay.innerHTML = `${originalText} <span class="text-blue-500 animate-pulse">🔄</span>`;
+        }
+    }
+    
+    hideAutoRefreshIndicator() {
+        const dateRangeDisplay = document.getElementById('date-range-display');
+        if (dateRangeDisplay) {
+            const originalText = dateRangeDisplay.getAttribute('data-original-text');
+            if (originalText) {
+                dateRangeDisplay.textContent = originalText;
+                dateRangeDisplay.removeAttribute('data-original-text');
+            }
+        }
+    }
+    
+    showAutoRefreshSuccess() {
+        // Show a brief success indicator
+        const dateRangeDisplay = document.getElementById('date-range-display');
+        if (dateRangeDisplay) {
+            const originalText = dateRangeDisplay.textContent;
+            dateRangeDisplay.innerHTML = `${originalText} <span class="text-green-500">✅</span>`;
+            
+            // Reset after 2 seconds
+            setTimeout(() => {
+                if (dateRangeDisplay.innerHTML.includes('✅')) {
+                    dateRangeDisplay.textContent = originalText;
+                }
+            }, 2000);
+        }
+    }
+    
+    
+    
+    // Removed loadDefaultData function - no more mock data
 
     async loadChartsData() {
         try {
@@ -634,43 +1524,79 @@ class Dashboard {
             const startDate = document.getElementById('start-date').value;
             const endDate = document.getElementById('end-date').value;
             
+            console.log(`🔄 Loading charts data for date range: ${startDate} to ${endDate}`);
+            
             // Use local Django API endpoint for charts data with date parameters
-            const url = `/api/charts/?start_date=${startDate}&end_date=${endDate}`;
+            let url = `/api/charts/?start_date=${startDate}&end_date=${endDate}`;
+            
+            // Add filter parameters
+            const reloanFilter = document.getElementById('reloan-filter').value;
+            const activeFilter = document.getElementById('active-filter').value;
+            const tenureFilter = document.getElementById('tenure-filter').value;
+            const stateFilter = document.getElementById('state-filter').value;
+            const cityFilter = document.getElementById('city-filter').value;
+            
+            if (reloanFilter) url += `&reloan=${encodeURIComponent(reloanFilter)}`;
+            if (activeFilter) url += `&active=${encodeURIComponent(activeFilter)}`;
+            if (tenureFilter) url += `&tenure=${encodeURIComponent(tenureFilter)}`;
+            if (stateFilter) url += `&state=${encodeURIComponent(stateFilter)}`;
+            if (cityFilter) url += `&city=${encodeURIComponent(cityFilter)}`;
             const response = await fetch(url);
             const data = await response.json();
             
-            if (data) {
-                // Create charts with local data
-                this.createStateChart(data.state_data);
-                this.createCityChart(data.city_data);
+            if (data && data.state_data && data.city_data) {
+                console.log(`📊 Charts data received: ${data.state_data.length} states, ${data.city_data.length} cities`);
+                
+                // Handle state chart
+                if (data.state_data.length > 0) {
+                    this.hideEmptyChartMessage('state');
+                    if (this.stateChart) {
+                        this.updateStateChart(data.state_data);
+                        console.log('✅ State chart updated dynamically');
+                    } else {
+                        this.createStateChart(data.state_data);
+                        console.log('🆕 State chart created');
+                    }
+                } else {
+                    this.showEmptyChartMessage('state');
+                    console.log('⚠️ No state data available');
+                }
+                
+                // Handle city chart
+                if (data.city_data.length > 0) {
+                    this.hideEmptyChartMessage('city');
+                    if (this.cityChart) {
+                        this.updateCityChart(data.city_data);
+                        console.log('✅ City chart updated dynamically');
+                    } else {
+                        this.createCityChart(data.city_data);
+                        console.log('🆕 City chart created');
+                    }
+                } else {
+                    this.showEmptyChartMessage('city');
+                    console.log('⚠️ No city data available');
+                }
+            } else {
+                console.warn('⚠️ No chart data received from API');
+                // Show empty messages for both charts
+                this.showEmptyChartMessage('state');
+                this.showEmptyChartMessage('city');
             }
         } catch (error) {
-            console.error('Error loading charts data:', error);
-            // Use default chart data
-            this.createDefaultCharts();
+            console.error('❌ Error loading charts data:', error);
+            
+            // Check if this is an authentication error
+            if (error.message && error.message.includes('401')) {
+                console.log('❌ Authentication expired, redirecting to login');
+                window.location.href = '/login/';
+                return;
+            }
+            
+            // No fallback - API data required
         }
     }
     
-    createDefaultCharts() {
-        // Default chart data if API fails
-        const defaultStateData = [
-            { state: 'Delhi', value: 150000, percentage: 45.2 },
-            { state: 'Haryana', value: 120000, percentage: 36.1 },
-            { state: 'Uttar Pradesh', value: 62000, percentage: 18.7 }
-        ];
-        
-        const defaultCityData = [
-            { city: 'Gurugram', value: 80000, percentage: 24.1 },
-            { city: 'Delhi', value: 75000, percentage: 22.6 },
-            { city: 'Noida', value: 65000, percentage: 19.6 },
-            { city: 'Faridabad', value: 45000, percentage: 13.6 },
-            { city: 'Ghaziabad', value: 35000, percentage: 10.5 },
-            { city: 'Others', value: 32000, percentage: 9.6 }
-        ];
-        
-        this.createStateChart(defaultStateData);
-        this.createCityChart(defaultCityData);
-    }
+    // Removed createDefaultCharts function - no more mock data
 
     async loadFilteredChartsData() {
         try {
@@ -697,10 +1623,35 @@ class Dashboard {
             const startDate = document.getElementById('start-date').value;
             const endDate = document.getElementById('end-date').value;
             
-            // Use local Django API endpoint for table data with date parameters
-            const url = `/api/table/?start_date=${startDate}&end_date=${endDate}`;
+            console.log(`📊 Loading table data for date range: ${startDate} to ${endDate}, Page: ${this.currentPage}, Per Page: ${this.perPage}, Search: "${this.searchTerm}"`);
+            
+            // Use local Django API endpoint for table data with date parameters, pagination, and search
+            let url = `/api/table/?start_date=${startDate}&end_date=${endDate}&page=${this.currentPage}&per_page=${this.perPage}`;
+            
+            // Add search term if exists
+            if (this.searchTerm && this.searchTerm.trim()) {
+                url += `&search=${encodeURIComponent(this.searchTerm.trim())}`;
+            }
+            
+            // Add filter parameters
+            const reloanFilter = document.getElementById('reloan-filter').value;
+            const activeFilter = document.getElementById('active-filter').value;
+            const tenureFilter = document.getElementById('tenure-filter').value;
+            const stateFilter = document.getElementById('state-filter').value;
+            const cityFilter = document.getElementById('city-filter').value;
+            
+            if (reloanFilter) url += `&reloan=${encodeURIComponent(reloanFilter)}`;
+            if (activeFilter) url += `&active=${encodeURIComponent(activeFilter)}`;
+            if (tenureFilter) url += `&tenure=${encodeURIComponent(tenureFilter)}`;
+            if (stateFilter) url += `&state=${encodeURIComponent(stateFilter)}`;
+            if (cityFilter) url += `&city=${encodeURIComponent(cityFilter)}`;
+            
+            console.log(`🔗 Fetching from: ${url}`);
+            
             const response = await fetch(url);
             const data = await response.json();
+            
+            console.log('📋 Table API response:', data);
             
             if (data && data.applications) {
                 // Store the data for filtering and pagination
@@ -708,71 +1659,75 @@ class Dashboard {
                 this.totalItems = data.total_items;
                 this.totalPages = data.total_pages;
                 this.currentPage = data.current_page;
+                this.perPage = data.per_page;
                 
-                // Render the table
-                this.renderTable();
+                // Render the table with the data
+                this.renderTable(data.applications);
                 
-                // Populate filter options
-                this.populateFilterOptions();
+                // Update pagination
+                this.renderPagination({
+                    current_page: data.current_page,
+                    total_pages: data.total_pages,
+                    total_items: data.total_items,
+                    per_page: data.per_page,
+                    start_index: data.start_index,
+                    end_index: data.end_index
+                });
+                
+                console.log(`✅ Table loaded with ${data.applications.length} applications for page ${data.current_page}`);
+            } else {
+                console.warn('⚠️ No applications data received from API');
+                this.renderTable([]);
+                this.renderPagination({
+                    current_page: 1,
+                    total_pages: 0,
+                    total_items: 0,
+                    per_page: this.perPage,
+                    start_index: 0,
+                    end_index: 0
+                });
             }
         } catch (error) {
             console.error('Error loading table data:', error);
-            // Use default table data
-            this.loadDefaultTableData();
+            
+            // Check if this is an authentication error
+            if (error.message && error.message.includes('401')) {
+                console.log('❌ Authentication expired, redirecting to login');
+                window.location.href = '/login/';
+                return;
+            }
+            
+            // No fallback - API data required
         }
     }
     
-    loadDefaultTableData() {
-        // Default table data if API fails
-        this.applicationsData = [
-            {
-                id: 1,
-                disbursal_date: '2025-01-15',
-                full_name: 'John Doe',
-                sanction_amount: 50000,
-                disbursed_amount: 45000,
-                processing_fee: 5000,
-                interest_amount: 3000,
-                repayment_amount: 53000
-            },
-            {
-                id: 2,
-                disbursal_date: '2025-01-16',
-                full_name: 'Jane Smith',
-                sanction_amount: 75000,
-                disbursed_amount: 70000,
-                processing_fee: 7500,
-                interest_amount: 4500,
-                repayment_amount: 79000
-            }
-        ];
-        
-        this.totalItems = this.applicationsData.length;
-        this.totalPages = 1;
-        this.currentPage = 1;
-        
-        this.renderTable();
-        this.populateFilterOptions();
-    }
+    // Removed loadDefaultTableData function - no more mock data
 
     createStateChart(data) {
-        const ctx = document.getElementById('stateChart').getContext('2d');
-        
-                     this.stateChart = new Chart(ctx, {
-                 type: 'pie',
-                 data: {
-                     labels: data.map(item => item.state),
-                     datasets: [{
-                         data: data.map(item => item.value),
-                         backgroundColor: [
-                             '#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#84cc16'
-                         ],
-                         borderWidth: 3,
-                         borderColor: '#ffffff',
-                         hoverBorderWidth: 4,
-                         hoverBorderColor: '#f8fafc'
-                     }]
-                 },
+        try {
+            const ctx = document.getElementById('stateChart');
+            if (!ctx) {
+                console.error('❌ State chart canvas element not found');
+                return;
+            }
+            
+            console.log(`🆕 Creating state chart with ${data.length} states`);
+            
+            this.stateChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: data.map(item => item.state),
+                    datasets: [{
+                        data: data.map(item => item.value),
+                        backgroundColor: [
+                            '#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#84cc16'
+                        ],
+                        borderWidth: 3,
+                        borderColor: '#ffffff',
+                        hoverBorderWidth: 4,
+                        hoverBorderColor: '#f8fafc'
+                    }]
+                },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -827,12 +1782,24 @@ class Dashboard {
                 }
             }
         });
+        
+        console.log('✅ State chart created successfully');
+    } catch (error) {
+        console.error('❌ Error creating state chart:', error);
+    }
     }
 
     createCityChart(data) {
-        const ctx = document.getElementById('cityChart').getContext('2d');
-        
-                     this.cityChart = new Chart(ctx, {
+        try {
+            const ctx = document.getElementById('cityChart');
+            if (!ctx) {
+                console.error('❌ City chart canvas element not found');
+                return;
+            }
+            
+            console.log(`🆕 Creating city chart with ${data.length} cities`);
+            
+            this.cityChart = new Chart(ctx, {
                  type: 'doughnut',
                  data: {
                      labels: data.map(item => item.city),
@@ -902,21 +1869,126 @@ class Dashboard {
                 }
             }
         });
+        
+        console.log('✅ City chart created successfully');
+    } catch (error) {
+        console.error('❌ Error creating city chart:', error);
+    }
     }
 
     updateStateChart(data) {
-        if (this.stateChart) {
+        if (this.stateChart && data && data.length > 0) {
+            console.log(`🔄 Updating state chart with ${data.length} states`);
+            
+            // Update chart data
             this.stateChart.data.labels = data.map(item => item.state);
             this.stateChart.data.datasets[0].data = data.map(item => item.value);
+            
+            // Update chart with smooth animation
             this.stateChart.update('active');
+            console.log('✅ State chart updated successfully');
+        } else {
+            console.warn('⚠️ Cannot update state chart: chart not initialized or no data');
         }
     }
 
     updateCityChart(data) {
-        if (this.cityChart) {
+        if (this.cityChart && data && data.length > 0) {
+            console.log(`🔄 Updating city chart with ${data.length} cities`);
+            
+            // Update chart data
             this.cityChart.data.labels = data.map(item => item.city);
             this.cityChart.data.datasets[0].data = data.map(item => item.value);
+            
+            // Update chart with smooth animation
             this.cityChart.update('active');
+            console.log('✅ City chart updated successfully');
+        } else {
+            console.warn('⚠️ Cannot update city chart: chart not initialized or no data');
+        }
+    }
+    
+    // Handle empty chart data gracefully
+    showEmptyChartMessage(chartType) {
+        const chartContainer = document.getElementById(chartType === 'state' ? 'stateChart' : 'cityChart');
+        if (chartContainer) {
+            const parent = chartContainer.parentElement;
+            if (parent) {
+                // Add a message overlay
+                let messageDiv = parent.querySelector('.empty-chart-message');
+                if (!messageDiv) {
+                    messageDiv = document.createElement('div');
+                    messageDiv.className = 'empty-chart-message absolute inset-0 flex items-center justify-center bg-gray-50 rounded-lg';
+                    messageDiv.innerHTML = `
+                        <div class="text-center text-gray-500">
+                            <svg class="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                            <p class="text-sm font-medium">No data available</p>
+                            <p class="text-xs">Select a different date range</p>
+                        </div>
+                    `;
+                    parent.style.position = 'relative';
+                    parent.appendChild(messageDiv);
+                }
+            }
+        }
+    }
+    
+    hideEmptyChartMessage(chartType) {
+        const chartContainer = document.getElementById(chartType === 'state' ? 'stateChart' : 'cityChart');
+        if (chartContainer) {
+            const parent = chartContainer.parentElement;
+            if (parent) {
+                const messageDiv = parent.querySelector('.empty-chart-message');
+                if (messageDiv) {
+                    messageDiv.remove();
+                }
+            }
+        }
+    }
+    
+    // Show chart update indicator during auto-refresh
+    showChartUpdateIndicator() {
+        const stateChartContainer = document.getElementById('stateChart')?.parentElement;
+        const cityChartContainer = document.getElementById('cityChart')?.parentElement;
+        
+        if (stateChartContainer) {
+            this.addChartUpdateIndicator(stateChartContainer, 'state');
+        }
+        if (cityChartContainer) {
+            this.addChartUpdateIndicator(cityChartContainer, 'city');
+        }
+        
+        // Remove indicators after 2 seconds
+        setTimeout(() => {
+            this.removeChartUpdateIndicator('state');
+            this.removeChartUpdateIndicator('city');
+        }, 2000);
+    }
+    
+    addChartUpdateIndicator(container, chartType) {
+        let indicator = container.querySelector('.chart-update-indicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.className = 'chart-update-indicator absolute top-2 right-2 z-10';
+            indicator.innerHTML = `
+                <div class="bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center space-x-1">
+                    <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                    <span>Updated</span>
+                </div>
+            `;
+            container.appendChild(indicator);
+        }
+    }
+    
+    removeChartUpdateIndicator(chartType) {
+        const chartContainer = document.getElementById(chartType === 'state' ? 'stateChart' : 'cityChart')?.parentElement;
+        if (chartContainer) {
+            const indicator = chartContainer.querySelector('.chart-update-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
         }
     }
 
@@ -924,22 +1996,58 @@ class Dashboard {
         const tbody = document.getElementById('table-body');
         tbody.innerHTML = '';
 
+        console.log(`🔄 Rendering table with ${data ? data.length : 0} rows`);
+        console.log('📊 Table data:', data);
+
+        if (!data || data.length === 0) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = '<td colspan="7" class="text-center py-8 text-gray-500">No data available for selected date range</td>';
+            tbody.appendChild(tr);
+            console.log('⚠️ No data to render - showing empty message');
+            return;
+        }
+
         data.forEach((row, index) => {
             const tr = document.createElement('tr');
             tr.className = 'enhanced-table-row';
             tr.style.animationDelay = `${index * 0.05}s`;
             
-            // Format dates
-            const disbursalDate = new Date(row.disbursal_date).toLocaleDateString('en-IN');
+            // Format dates - handle different date field names
+            let disbursalDate = 'N/A';
+            try {
+                const dateValue = row.disbursal_date || row.disbursalDate || row.date;
+                if (dateValue) {
+                    disbursalDate = new Date(dateValue).toLocaleDateString('en-IN');
+                }
+            } catch (e) {
+                console.warn('Could not parse date:', row.disbursal_date || row.disbursalDate || row.date);
+            }
+            
+            // Handle different field names from Blinkr API
+            const fullName = row.full_name || row.fullName || row.name || row.customer_name || 'N/A';
+            const sanctionAmount = row.sanction_amount || row.sanctionAmount || row.loan_amount || 0;
+            const disbursedAmount = row.disbursed_amount || row.Disbursal_Amt || row.disbursalAmount || 0;
+            const processingFee = row.processing_fee || row.processingFee || row.pf_amount || 0;
+            const interestAmount = row.interest_amount || row.interestAmount || 0;
+            const repaymentAmount = row.repayment_amount || row.repaymentAmount || 0;
+            
+            console.log(`📝 Processing row ${index}:`, {
+                fullName,
+                sanctionAmount,
+                disbursedAmount,
+                processingFee,
+                interestAmount,
+                repaymentAmount
+            });
             
             tr.innerHTML = `
                 <td class="table-cell">${disbursalDate}</td>
-                <td class="table-cell font-semibold">${row.full_name}</td>
-                <td class="table-cell font-mono">₹${this.formatNumber(row.loan_amount)}</td>
-                <td class="table-cell font-mono">₹${this.formatNumber(row.Disbursal_Amt)}</td>
-                <td class="table-cell font-mono">₹${this.formatNumber(row.processing_fee)}</td>
-                <td class="table-cell font-mono">₹${this.formatNumber(row.interest_amount)}</td>
-                <td class="table-cell font-mono font-semibold">₹${this.formatNumber(row.repayment_amount)}</td>
+                <td class="table-cell font-semibold">${fullName}</td>
+                <td class="table-cell font-mono">₹${this.formatNumber(sanctionAmount)}</td>
+                <td class="table-cell font-mono">₹${this.formatNumber(disbursedAmount)}</td>
+                <td class="table-cell font-mono">₹${this.formatNumber(processingFee)}</td>
+                <td class="table-cell font-mono">₹${this.formatNumber(interestAmount)}</td>
+                <td class="table-cell font-mono font-semibold">₹${this.formatNumber(repaymentAmount)}</td>
             `;
             
             tbody.appendChild(tr);
@@ -948,15 +2056,12 @@ class Dashboard {
 
     renderPagination(pagination) {
         const paginationContainer = document.getElementById('pagination');
-        const { current_page, total_pages, total_items, per_page } = pagination;
+        const { current_page, total_pages, total_items, per_page, start_index, end_index } = pagination;
         
         // Update showing info
-        const start = (current_page - 1) * per_page + 1;
-        const end = Math.min(current_page * per_page, total_items);
-        
-        document.getElementById('showing-start').textContent = start;
-        document.getElementById('showing-end').textContent = end;
-        document.getElementById('total-items').textContent = total_items;
+        document.getElementById('showing-start').textContent = start_index || 1;
+        document.getElementById('showing-end').textContent = end_index || 0;
+        document.getElementById('total-items').textContent = total_items || 0;
         
         // Create pagination controls
         let paginationHTML = '';
@@ -996,6 +2101,7 @@ class Dashboard {
     }
 
     goToPage(page) {
+        console.log(`🔄 Navigating to page ${page}`);
         this.currentPage = page;
         this.loadTableData();
     }
@@ -1024,64 +2130,239 @@ class Dashboard {
             state: '',
             city: ''
         };
+        
+        // Refresh distinct values to show all options again
+        this.loadDistinctValues();
+    }
+    
+    clearSearch() {
+        document.getElementById('search-input').value = '';
+        this.searchTerm = '';
+        this.currentPage = 1; // Reset to first page
+        this.toggleClearSearchButton();
+        this.showSearchIndicator();
+        this.loadTableData();
+        console.log('🔍 Search cleared');
+    }
+    
+    toggleClearSearchButton() {
+        const clearButton = document.getElementById('clear-search');
+        if (this.searchTerm && this.searchTerm.trim()) {
+            clearButton.classList.remove('hidden');
+        } else {
+            clearButton.classList.add('hidden');
+        }
+    }
+    
+    showSearchIndicator() {
+        const searchInput = document.getElementById('search-input');
+        if (this.searchTerm && this.searchTerm.trim()) {
+            searchInput.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-50');
+        } else {
+            searchInput.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-50');
+        }
     }
 
     setupEventListeners() {
-        // Search input
+        // Search input with debouncing
         document.getElementById('search-input').addEventListener('input', (e) => {
             this.searchTerm = e.target.value;
-            this.currentPage = 1;
-            this.loadTableData();
+            this.currentPage = 1; // Reset to first page when searching
+            
+            // Show/hide clear search button
+            this.toggleClearSearchButton();
+            
+            // Show search indicator
+            this.showSearchIndicator();
+            
+            // Clear existing search timer
+            if (this.searchTimer) {
+                clearTimeout(this.searchTimer);
+            }
+            
+            // Set new timer to search after 500ms of no typing
+            this.searchTimer = setTimeout(() => {
+                console.log(`🔍 Searching for: "${this.searchTerm}"`);
+                this.loadTableData();
+            }, 500);
+        });
+        
+        // Clear search button
+        document.getElementById('clear-search').addEventListener('click', () => {
+            this.clearSearch();
         });
 
         // Per page selector
         document.getElementById('per-page').addEventListener('change', (e) => {
             this.perPage = parseInt(e.target.value);
-            this.currentPage = 1;
+            this.currentPage = 1; // Reset to first page when changing per page
             this.loadTableData();
         });
 
-        // Date range changes
+        // Date range changes - automatically trigger API calls with debouncing
         document.getElementById('start-date').addEventListener('change', () => {
-            console.log('Start date changed, refreshing data...');
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const isSameDate = startDate === endDate;
+            console.log(`Start date changed to: ${startDate}, End date: ${endDate}`);
+            if (isSameDate) {
+                console.log(`🔄 Same date detected: ${startDate} - Will load data for single day`);
+                // Show user-friendly message for same date selection
+                this.showSameDateMessage(startDate);
+            }
             this.validateDateRange();
             this.updateDateRangeDisplay();
-            this.loadSummaryData();
+            // Reset pagination to page 1 when date changes
+            this.currentPage = 1;
+            // Clear state and city filters when date changes (since available options may change)
+            document.getElementById('state-filter').value = '';
+            document.getElementById('city-filter').value = '';
+            // Load distinct values for new date range
+            this.loadDistinctValues();
+            // Always trigger data load, even for same dates
+            this.debouncedLoadData();
         });
 
         document.getElementById('end-date').addEventListener('change', () => {
-            console.log('End date changed, refreshing data...');
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const isSameDate = startDate === endDate;
+            console.log(`End date changed to: ${endDate}, Start date: ${startDate}`);
+            if (isSameDate) {
+                console.log(`🔄 Same date detected: ${endDate} - Will load data for single day`);
+                // Show user-friendly message for same date selection
+                this.showSameDateMessage(endDate);
+            }
             this.validateDateRange();
             this.updateDateRangeDisplay();
-            this.loadSummaryData();
+            // Reset pagination to page 1 when date changes
+            this.currentPage = 1;
+            // Clear state and city filters when date changes (since available options may change)
+            document.getElementById('state-filter').value = '';
+            document.getElementById('city-filter').value = '';
+            // Load distinct values for new date range
+            this.loadDistinctValues();
+            // Always trigger data load, even for same dates
+            this.debouncedLoadData();
         });
 
         // Apply filters button
         document.getElementById('apply-filters').addEventListener('click', () => {
             this.updateFilters();
-            this.currentPage = 1;
-            this.loadFilteredChartsData();
+            this.currentPage = 1; // Reset to first page when applying filters
+            
+            // Refresh distinct values to ensure city filter is properly populated for current state
+            this.loadDistinctValues();
+            
+            this.loadSummaryData();
+            this.loadChartsData();
             this.loadTableData();
         });
 
         // Clear filters button
         document.getElementById('clear-filters').addEventListener('click', () => {
             this.clearFilters();
-            this.currentPage = 1;
+            this.currentPage = 1; // Reset to first page when clearing filters
+            this.loadSummaryData();
             this.loadChartsData();
             this.loadTableData();
         });
 
-        // Individual filter changes (optional: auto-apply)
+        // Individual filter changes with cascading filter support
         document.getElementById('state-filter').addEventListener('change', () => {
             this.updateFilters();
-            this.loadFilteredChartsData();
+            this.currentPage = 1; // Reset to first page when filters change
+            
+            // Clear city filter when state changes
+            document.getElementById('city-filter').value = '';
+            
+            // Refresh distinct values to get relevant options for other filters
+            this.loadDistinctValues();
+            
+            this.loadSummaryData();
+            this.loadChartsData();
+            this.loadTableData();
         });
 
         document.getElementById('city-filter').addEventListener('change', () => {
             this.updateFilters();
-            this.loadFilteredChartsData();
+            this.currentPage = 1; // Reset to first page when filters change
+            
+            // Refresh distinct values to get relevant options for other filters
+            this.loadDistinctValues();
+            
+            this.loadSummaryData();
+            this.loadChartsData();
+            this.loadTableData();
         });
+        
+        // Reloan filter change
+        document.getElementById('reloan-filter').addEventListener('change', () => {
+            this.updateFilters();
+            this.currentPage = 1; // Reset to first page when filters change
+            
+            // Clear dependent filters when reloan changes
+            document.getElementById('state-filter').value = '';
+            document.getElementById('city-filter').value = '';
+            
+            // Refresh distinct values to get relevant options for other filters
+            this.loadDistinctValues();
+            
+            this.loadSummaryData();
+            this.loadChartsData();
+            this.loadTableData();
+        });
+        
+        // Active filter change
+        document.getElementById('active-filter').addEventListener('change', () => {
+            this.updateFilters();
+            this.currentPage = 1; // Reset to first page when filters change
+            
+            // Clear dependent filters when active status changes
+            document.getElementById('state-filter').value = '';
+            document.getElementById('city-filter').value = '';
+            
+            // Refresh distinct values to get relevant options for other filters
+            this.loadDistinctValues();
+            
+            this.loadSummaryData();
+            this.loadChartsData();
+            this.loadTableData();
+        });
+        
+        // Tenure filter change
+        document.getElementById('tenure-filter').addEventListener('change', () => {
+            this.updateFilters();
+            this.currentPage = 1; // Reset to first page when filters change
+            
+            // Clear dependent filters when tenure changes
+            document.getElementById('state-filter').value = '';
+            document.getElementById('city-filter').value = '';
+            
+            // Refresh distinct values to get relevant options for other filters
+            this.loadDistinctValues();
+            
+            this.loadSummaryData();
+            this.loadChartsData();
+            this.loadTableData();
+        });
+        
+                         // Logout button with confirmation
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            this.confirmLogout();
+        });
+        
+        // Error overlay event listeners
+        document.getElementById('retry-button').addEventListener('click', () => {
+            this.hideError();
+            this.loadSummaryData();
+        });
+        
+        document.getElementById('close-error').addEventListener('click', () => {
+            this.hideError();
+        });
+         
+
     }
 
     formatNumber(num) {
@@ -1147,7 +2428,13 @@ class Dashboard {
         
         if (this.filters.active !== '') {
             const isActive = this.filters.active === 'active';
-            filteredData = filteredData.filter(app => app.is_lead_closed === !isActive);
+            if (isActive) {
+                // For 'active' filter: show only open leads (is_lead_closed = false)
+                filteredData = filteredData.filter(app => app.is_lead_closed === false);
+            } else {
+                // For 'inactive' filter: show only closed leads (is_lead_closed = true)
+                filteredData = filteredData.filter(app => app.is_lead_closed === true);
+            }
         }
         
         if (this.filters.tenure !== '') {
@@ -1166,49 +2453,20 @@ class Dashboard {
         return filteredData;
     }
     
-    // Populate filter options dynamically
-    populateFilterOptions() {
-        if (!this.applicationsData || this.applicationsData.length === 0) return;
-        
-        // Get unique states
-        const states = [...new Set(this.applicationsData.map(app => app.state))].sort();
-        const stateFilter = document.getElementById('state-filter');
-        
-        // Clear existing options except "All States"
-        stateFilter.innerHTML = '<option value="">All States</option>';
-        
-        // Add state options
-        states.forEach(state => {
-            if (state) {
-                const option = document.createElement('option');
-                option.value = state;
-                option.textContent = state;
-                stateFilter.appendChild(option);
-            }
-        });
-        
-        // Get unique cities
-        const cities = [...new Set(this.applicationsData.map(app => app.city))].sort();
-        const cityFilter = document.getElementById('city-filter');
-        
-        // Clear existing options except "All Cities"
-        cityFilter.innerHTML = '<option value="">All Cities</option>';
-        
-        // Add city options
-        cities.forEach(city => {
-            if (city) {
-                const option = document.createElement('option');
-                option.value = city;
-                option.textContent = city;
-                cityFilter.appendChild(option);
-            }
-        });
-    }
+
 }
 
-// Initialize dashboard when page loads
-document.addEventListener('DOMContentLoaded', () => {
-    window.dashboard = new Dashboard();
+ // Initialize dashboard when page loads
+ document.addEventListener('DOMContentLoaded', () => {
+     window.dashboard = new Dashboard();
+ });
+ 
+ // Cleanup when page is unloaded
+window.addEventListener('beforeunload', () => {
+    if (window.dashboard) {
+        window.dashboard.stopAutoRefresh();
+        window.dashboard.stopSessionTimeoutMonitor();
+    }
 });
 </script>
 {% endblock %}
