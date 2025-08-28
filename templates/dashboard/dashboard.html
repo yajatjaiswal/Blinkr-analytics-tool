@@ -370,32 +370,82 @@
 
             <!-- Additional Metrics Cards -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-                <!-- Collection Rate Card -->
+                <!-- Pending Sanction Amount Card -->
                 <div class="enhanced-stat-card animate-on-scroll group hover:scale-105 transition-all duration-500">
                     <div class="relative overflow-hidden">
                         <!-- Animated Background Pattern -->
-                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-50 to-teal-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        <div class="absolute inset-0 bg-gradient-to-br from-yellow-50 to-amber-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                         <!-- Header Icon at Top Center -->
                         <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
-                            <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-glow">
+                            <div class="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-2xl flex items-center justify-center shadow-glow">
                                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
                                 </svg>
                             </div>
                         </div>
                         <!-- Content -->
                         <div class="relative pt-16 pb-4 px-4 text-center flex flex-col justify-between" style="min-height: 80px;">
                             <div class="flex-1 flex flex-col justify-center min-h-8">
-                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Collection Rate">Collection Rate</p>
+                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Pending Sanction Amount">Pending Sanction Amount</p>
                             </div>
                             <div class="flex-1 flex flex-col justify-center">
-                                <p class="text-lg font-bold text-gray-900" id="collection-rate">84.8%</p>
+                                <p class="text-lg font-bold text-gray-900" id="pending-sanction-amount">₹0</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Pending Collections Card -->
+                <!-- Pending Disbursal Amount Card -->
+                <div class="enhanced-stat-card animate-on-scroll group hover:scale-105 transition-all duration-500">
+                    <div class="relative overflow-hidden">
+                        <!-- Animated Background Pattern -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-orange-50 to-red-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        <!-- Header Icon at Top Center -->
+                        <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+                            <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center shadow-glow">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <!-- Content -->
+                        <div class="relative pt-16 pb-4 px-4 text-center flex flex-col justify-between" style="min-height: 80px;">
+                            <div class="flex-1 flex flex-col justify-center min-h-8">
+                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Pending Disbursal Amount">Pending Disbursal Amount</p>
+                            </div>
+                            <div class="flex-1 flex flex-col justify-center">
+                                <p class="text-lg font-bold text-gray-900" id="pending-disbursal-amount">₹0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total Applications Card -->
+                <div class="enhanced-stat-card animate-on-scroll group hover:scale-105 transition-all duration-500">
+                    <div class="relative overflow-hidden">
+                        <!-- Animated Background Pattern -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        <!-- Header Icon at Top Center -->
+                        <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+                            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-glow">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <!-- Content -->
+                        <div class="relative pt-16 pb-4 px-4 text-center flex flex-col justify-between" style="min-height: 80px;">
+                            <div class="flex-1 flex flex-col justify-center min-h-8">
+                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Total Applications">Total Applications</p>
+                            </div>
+                            <div class="flex-1 flex flex-col justify-center">
+                                <p class="text-lg font-bold text-gray-900" id="total-applications-admin">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pending Applications Card -->
                 <div class="enhanced-stat-card animate-on-scroll group hover:scale-105 transition-all duration-500">
                     <div class="relative overflow-hidden">
                         <!-- Animated Background Pattern -->
@@ -411,60 +461,86 @@
                         <!-- Content -->
                         <div class="relative pt-16 pb-4 px-4 text-center flex flex-col justify-between" style="min-height: 80px;">
                             <div class="flex-1 flex flex-col justify-center min-h-8">
-                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Pending Collections">Pending Collections</p>
+                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Pending Applications">Pending Applications</p>
                             </div>
                             <div class="flex-1 flex flex-col justify-center">
-                                <p class="text-lg font-bold text-gray-900" id="pending-collections">₹1,41,044</p>
+                                <p class="text-lg font-bold text-gray-900" id="pending-applications">0</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Overdue Amount Card -->
+                <!-- Rejected Applications Card -->
                 <div class="enhanced-stat-card animate-on-scroll group hover:scale-105 transition-all duration-500">
                     <div class="relative overflow-hidden">
                         <!-- Animated Background Pattern -->
-                        <div class="absolute inset-0 bg-gradient-to-br from-orange-50 to-amber-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        <div class="absolute inset-0 bg-gradient-to-br from-gray-50 to-slate-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                         <!-- Header Icon at Top Center -->
                         <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
-                            <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl flex items-center justify-center shadow-glow">
+                            <div class="w-12 h-12 bg-gradient-to-br from-gray-500 to-slate-600 rounded-2xl flex items-center justify-center shadow-glow">
                                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
                             </div>
                         </div>
                         <!-- Content -->
                         <div class="relative pt-16 pb-4 px-4 text-center flex flex-col justify-between" style="min-height: 80px;">
                             <div class="flex-1 flex flex-col justify-center min-h-8">
-                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Overdue Amount">Overdue Amount</p>
+                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Rejected Applications">Rejected Applications</p>
                             </div>
                             <div class="flex-1 flex flex-col justify-center">
-                                <p class="text-lg font-bold text-gray-900" id="overdue-amount">₹89,567</p>
+                                <p class="text-lg font-bold text-gray-900" id="rejected-applications">0</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Recovery Rate Card -->
+                <!-- Collection Amount Card -->
                 <div class="enhanced-stat-card animate-on-scroll group hover:scale-105 transition-all duration-500">
                     <div class="relative overflow-hidden">
                         <!-- Animated Background Pattern -->
-                        <div class="absolute inset-0 bg-gradient-to-br from-cyan-50 to-blue-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-50 to-teal-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                         <!-- Header Icon at Top Center -->
                         <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
-                            <div class="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-glow">
+                            <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-glow">
                                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                                 </svg>
                             </div>
                         </div>
                         <!-- Content -->
                         <div class="relative pt-16 pb-4 px-4 text-center flex flex-col justify-between" style="min-height: 80px;">
                             <div class="flex-1 flex flex-col justify-center min-h-8">
-                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Recovery Rate">Recovery Rate</p>
+                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Collection Amount">Collection Amount</p>
                             </div>
                             <div class="flex-1 flex flex-col justify-center">
-                                <p class="text-lg font-bold text-gray-900" id="recovery-rate">92.3%</p>
+                                <p class="text-lg font-bold text-gray-900" id="collection-amount">₹0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fresh Customer Landing Card -->
+                <div class="enhanced-stat-card animate-on-scroll group hover:scale-105 transition-all duration-500">
+                    <div class="relative overflow-hidden">
+                        <!-- Animated Background Pattern -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-purple-50 to-violet-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        <!-- Header Icon at Top Center -->
+                        <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+                            <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-glow">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <!-- Content -->
+                        <div class="relative pt-16 pb-4 px-4 text-center flex flex-col justify-between" style="min-height: 80px;">
+                            <div class="flex-1 flex flex-col justify-center min-h-8">
+                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Fresh Customer Landing">Fresh Customer Landing</p>
+                            </div>
+                            <div class="flex-1 flex flex-col justify-center">
+                                <p class="text-lg font-bold text-gray-900" id="fresh-customer-landing">0</p>
                             </div>
                         </div>
                     </div>
@@ -489,13 +565,13 @@
                                 <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Average Tenure">Average Tenure</p>
                             </div>
                             <div class="flex-1 flex flex-col justify-center">
-                                <p class="text-lg font-bold text-gray-900" id="average-tenure">28 days</p>
+                                <p class="text-lg font-bold text-gray-900" id="average-tenure">0 days</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Active Loans Card -->
+                <!-- Average Loan Size Card -->
                 <div class="enhanced-stat-card animate-on-scroll group hover:scale-105 transition-all duration-500">
                     <div class="relative overflow-hidden">
                         <!-- Animated Background Pattern -->
@@ -511,10 +587,10 @@
                         <!-- Content -->
                         <div class="relative pt-16 pb-4 px-4 text-center flex flex-col justify-between" style="min-height: 80px;">
                             <div class="flex-1 flex flex-col justify-center min-h-8">
-                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Active Loans">Active Loans</p>
+                                <p class="text-xs text-gray-600 font-medium tracking-wide" style="color: #374151 !important; opacity: 1 !important; visibility: visible !important; position: relative !important; z-index: 20 !important;" title="Average Loan Size">Average Loan Size</p>
                             </div>
                             <div class="flex-1 flex flex-col justify-center">
-                                <p class="text-lg font-bold text-gray-900" id="active-loans">13</p>
+                                <p class="text-lg font-bold text-gray-900" id="average-loan-size">₹0</p>
                             </div>
                         </div>
                     </div>
@@ -1142,6 +1218,56 @@ class Dashboard {
         document.getElementById('interest-amount').textContent = `₹${this.formatNumber(data.total_interest_amount)}`;
         document.getElementById('repayment-amount').textContent = `₹${this.formatNumber(data.total_repayment_amount)}`;
         document.getElementById('avg-disbursal').textContent = `₹${this.formatNumber(data.avg_disbursal)}`;
+        
+        // Update admin dashboard metrics if available
+        console.log('🔍 Admin dashboard data received:', {
+            pending_sanction_amount: data.pending_sanction_amount,
+            pending_disbursal_amount: data.pending_disbursal_amount,
+            total_applications_admin: data.total_applications_admin,
+            pending_applications: data.pending_applications,
+            rejected_applications: data.rejected_applications,
+            collection_amount: data.collection_amount,
+            fresh_customer_landing: data.fresh_customer_landing,
+            average_tenure: data.average_tenure,
+            average_loan_size: data.average_loan_size
+        });
+        
+        if (data.pending_sanction_amount !== undefined) {
+            document.getElementById('pending-sanction-amount').textContent = `₹${this.formatNumber(data.pending_sanction_amount)}`;
+            console.log(`✅ Updated pending-sanction-amount: ₹${this.formatNumber(data.pending_sanction_amount)}`);
+        }
+        if (data.pending_disbursal_amount !== undefined) {
+            document.getElementById('pending-disbursal-amount').textContent = `₹${this.formatNumber(data.pending_disbursal_amount)}`;
+            console.log(`✅ Updated pending-disbursal-amount: ₹${this.formatNumber(data.pending_disbursal_amount)}`);
+        }
+        if (data.total_applications_admin !== undefined) {
+            document.getElementById('total-applications-admin').textContent = data.total_applications_admin;
+            console.log(`✅ Updated total-applications-admin: ${data.total_applications_admin}`);
+        }
+        if (data.pending_applications !== undefined) {
+            document.getElementById('pending-applications').textContent = data.pending_applications;
+            console.log(`✅ Updated pending-applications: ${data.pending_applications}`);
+        }
+        if (data.rejected_applications !== undefined) {
+            document.getElementById('rejected-applications').textContent = data.rejected_applications;
+            console.log(`✅ Updated rejected-applications: ${data.rejected_applications}`);
+        }
+        if (data.collection_amount !== undefined) {
+            document.getElementById('collection-amount').textContent = `₹${this.formatNumber(data.collection_amount)}`;
+            console.log(`✅ Updated collection-amount: ₹${this.formatNumber(data.collection_amount)}`);
+        }
+        if (data.fresh_customer_landing !== undefined) {
+            document.getElementById('fresh-customer-landing').textContent = data.fresh_customer_landing;
+            console.log(`✅ Updated fresh-customer-landing: ${data.fresh_customer_landing}`);
+        }
+        if (data.average_tenure !== undefined) {
+            document.getElementById('average-tenure').textContent = `${data.average_tenure} days`;
+            console.log(`✅ Updated average-tenure: ${data.average_tenure} days`);
+        }
+        if (data.average_loan_size !== undefined) {
+            document.getElementById('average-loan-size').textContent = `₹${this.formatNumber(data.average_loan_size)}`;
+            console.log(`✅ Updated average-loan-size: ₹${this.formatNumber(data.average_loan_size)}`);
+        }
         
         // Show API status indicator
         this.showApiStatus(true);

@@ -1,2 +1,4 @@
 Django==4.2.7
 django-tailwind==3.8.0
+django-cors-headers==4.7.0
+requests==2.31.0
